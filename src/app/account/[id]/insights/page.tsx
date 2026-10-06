@@ -74,6 +74,7 @@ export default function InsightsPage() {
   const [stats, setStats] = useState<PostStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [classifying, setClassifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<InsightsPeriod>("all-time");
   const [activeTab, setActiveTab] = useState<TabType>("latest");
@@ -107,6 +108,32 @@ export default function InsightsPage() {
   useEffect(() => {
     fetchInsights();
   }, [currentAccount]);
+
+  // Classify posts that need it
+  const handleClassify = async () => {
+    if (!currentAccount) return;
+
+    setClassifying(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/accounts/${currentAccount.id}/posts/classify`, {
+        method: "POST",
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // Refresh stats to show updated classification count
+        await fetchInsights();
+      } else {
+        setError(data.error || "Failed to classify posts");
+      }
+    } catch (err) {
+      setError("Failed to classify posts");
+    } finally {
+      setClassifying(false);
+    }
+  };
 
   const handleGenerate = async (isBaseline: boolean = false) => {
     if (!currentAccount) return;
@@ -252,6 +279,79 @@ export default function InsightsPage() {
 
   const canGenerate = stats && stats.classified >= 5;
   const isFirstRun = history.length === 0 && !insights;
+  const needsClassification = stats && stats.total > 0 && stats.classified < stats.total;
+
+  // Need to classify posts first
+  if (!loading && stats && stats.classified < 5 && stats.total > 0) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center">
+          <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Sparkles className="w-8 h-8 text-purple-400" />
+          </div>
+
+          <h1 className="text-2xl font-bold text-white mb-2">Classify Your Posts</h1>
+          <p className="text-slate-400 mb-8">
+            Before generating insights, we need to analyze your posts with AI to extract content types and key messages.
+          </p>
+
+          {error && (
+            <div className="bg-red-500/20 text-red-400 p-4 rounded-xl mb-6">{error}</div>
+          )}
+
+          <div className="bg-slate-800/50 rounded-lg p-4 mb-8 text-left">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                  <span className="text-xs text-white">✓</span>
+                </div>
+                <span className="text-slate-300">{stats.total} posts synced</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${stats.classified > 0 ? 'bg-amber-500' : 'bg-slate-700'}`}>
+                  <span className={`text-xs ${stats.classified > 0 ? 'text-white' : 'text-slate-400'}`}>
+                    {stats.classified > 0 ? '~' : '○'}
+                  </span>
+                </div>
+                <span className="text-slate-300">
+                  {stats.classified} / {stats.total} posts classified
+                  {stats.classified < 5 && <span className="text-slate-500"> (need at least 5)</span>}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center">
+                  <span className="text-xs text-slate-400">○</span>
+                </div>
+                <span className="text-slate-400">Generate insights</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleClassify}
+            disabled={classifying}
+            className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 rounded-lg text-white mx-auto disabled:opacity-50"
+          >
+            {classifying ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Classifying {stats.total - stats.classified} posts...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                Classify Posts with AI
+              </>
+            )}
+          </button>
+
+          <p className="text-sm text-slate-500 mt-6">
+            This uses Claude to analyze each post's content, extract topics, and identify the core message.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // First-run baseline state
   if (!loading && isFirstRun && canGenerate) {

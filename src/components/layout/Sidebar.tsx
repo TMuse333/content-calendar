@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Calendar,
-  BarChart3,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -17,6 +16,17 @@ import {
   Sparkles,
   Target,
   StickyNote,
+  Clapperboard,
+  Palette,
+  GitBranch,
+  BookOpen,
+  TrendingUp,
+  Image,
+  UserPlus,
+  CheckCircle,
+  AlertCircle,
+  ExternalLink,
+  Layers,
 } from "lucide-react";
 import { useState } from "react";
 import { useAccount } from "@/contexts/AccountContext";
@@ -101,10 +111,34 @@ export function Sidebar() {
           description: "Strategy notes & ideas",
         },
         {
-          label: "Analytics",
-          href: `${accountBase}/analytics`,
-          icon: BarChart3,
-          description: "Performance data",
+          label: "Packages",
+          href: `${accountBase}/packages`,
+          icon: Clapperboard,
+          description: "Video series & episodes",
+        },
+        {
+          label: "Graphics",
+          href: `${accountBase}/graphics`,
+          icon: Palette,
+          description: "Client graphic packages",
+        },
+        {
+          label: "Assets",
+          href: `${accountBase}/assets`,
+          icon: Image,
+          description: "Photos & media library",
+        },
+        {
+          label: "Results",
+          href: `${accountBase}/results`,
+          icon: TrendingUp,
+          description: "Outcomes & ROI",
+        },
+        {
+          label: "Pipeline",
+          href: `${accountBase}/pipeline`,
+          icon: GitBranch,
+          description: "Connected apps & workflow",
         },
       ],
     },
@@ -118,6 +152,21 @@ export function Sidebar() {
           description: "Campaigns & platforms",
         },
       ],
+    },
+  ];
+
+  const globalNavItems: NavItem[] = [
+    {
+      label: "Entropy Levels",
+      href: "/entropy",
+      icon: Layers,
+      description: "Content strategy framework",
+    },
+    {
+      label: "Playbooks",
+      href: "/playbooks",
+      icon: BookOpen,
+      description: "Strategy frameworks",
     },
   ];
 
@@ -223,6 +272,51 @@ export function Sidebar() {
         )}
       </nav>
 
+      {/* Global Navigation */}
+      <div className="border-t border-slate-800 py-2 px-2">
+        {!isCollapsed && (
+          <p className="px-2 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+            Global
+          </p>
+        )}
+        <div className="space-y-0.5">
+          {globalNavItems.map((item) => {
+            const isActive = isActiveLink(item.href);
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`
+                  flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
+                  ${
+                    isActive
+                      ? "bg-purple-500/10 text-purple-400"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }
+                `}
+                title={isCollapsed ? item.label : undefined}
+              >
+                <Icon
+                  className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-purple-400" : ""}`}
+                />
+                {!isCollapsed && (
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium">{item.label}</span>
+                    {item.description && (
+                      <p className="text-[10px] text-slate-500 truncate">
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Admin Navigation */}
       <div className="border-t border-slate-800 py-2 px-2">
         {!isCollapsed && (
@@ -267,6 +361,89 @@ export function Sidebar() {
           })}
         </div>
       </div>
+
+      {/* Onboarding Status */}
+      {currentAccount && (
+        <div className="border-t border-slate-800 p-2">
+          {!isCollapsed && (
+            <p className="px-2 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              Client Onboarding
+            </p>
+          )}
+          <div className="space-y-1">
+            {/* Status indicator */}
+            <div
+              className={`
+                flex items-center gap-3 px-3 py-2.5 rounded-lg
+                ${currentAccount.platforms?.instagram?.connected
+                  ? "bg-green-500/10 border border-green-500/20"
+                  : "bg-amber-500/10 border border-amber-500/20"
+                }
+              `}
+            >
+              <div
+                className={`
+                  w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                  ${currentAccount.platforms?.instagram?.connected
+                    ? "bg-green-500/20"
+                    : "bg-amber-500/20"
+                  }
+                `}
+              >
+                {currentAccount.platforms?.instagram?.connected ? (
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                )}
+              </div>
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <span className={`text-sm font-medium ${
+                    currentAccount.platforms?.instagram?.connected
+                      ? "text-green-400"
+                      : "text-amber-400"
+                  }`}>
+                    {currentAccount.platforms?.instagram?.connected
+                      ? "Connected"
+                      : "Not Connected"
+                    }
+                  </span>
+                  <p className="text-[10px] text-slate-500 truncate">
+                    {currentAccount.platforms?.instagram?.connected
+                      ? currentAccount.platforms.instagram.username
+                      : "Instagram pending"
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Open onboarding link */}
+            <a
+              href={`/onboard/${currentAccount.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors group"
+              title={isCollapsed ? "Open Onboarding Page" : undefined}
+            >
+              <div className="w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <UserPlus className="w-4 h-4" />
+              </div>
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0 flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium">Onboard Link</span>
+                    <p className="text-[10px] text-slate-500 truncate">
+                      Send to client
+                    </p>
+                  </div>
+                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                </div>
+              )}
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Collapse Toggle */}
       <div className="p-2 border-t border-slate-800">

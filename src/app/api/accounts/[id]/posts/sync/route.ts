@@ -93,12 +93,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       permalink: `https://www.instagram.com/p/${p.id}/`,
       postedAt: new Date(p.timestamp),
       metrics: {
-        likes: 0, // Not available in current insights response
-        comments: 0,
+        likes: p.likes,
+        comments: p.comments,
         reach: p.reach,
         impressions: p.impressions,
         engagement: p.engagement,
         videoViews: p.videoViews || undefined,
+        saves: p.saves,
+        shares: p.shares,
       },
       syncedAt: new Date(),
       updatedAt: new Date(),

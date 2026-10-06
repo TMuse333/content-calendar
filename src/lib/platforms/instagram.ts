@@ -23,8 +23,9 @@ export interface InstagramInsights {
 
 export interface UploadRequest {
   mediaUrl: string;
-  mediaType: "VIDEO" | "IMAGE";
+  mediaType: "REELS" | "VIDEO" | "IMAGE";
   caption?: string;
+  thumbnailUrl?: string; // Cover image URL for Reels
   scheduledTime?: string; // ISO date string
 }
 
@@ -55,6 +56,10 @@ export interface PostWithInsights {
   reach: number;
   engagement: number;
   videoViews: number;
+  likes: number;
+  comments: number;
+  saves: number;
+  shares: number;
 }
 
 // Credentials type for per-account support
@@ -117,7 +122,7 @@ export async function uploadToInstagram(request: UploadRequest, credentials?: In
   }
 
   const { instagramId, accessToken } = creds;
-  const { mediaUrl, mediaType, caption, scheduledTime } = request;
+  const { mediaUrl, mediaType, caption, thumbnailUrl, scheduledTime } = request;
 
   try {
     // Step 1: Create media container
@@ -125,9 +130,12 @@ export async function uploadToInstagram(request: UploadRequest, credentials?: In
       caption: caption || "",
     };
 
-    if (mediaType === "VIDEO") {
-      containerPayload.media_type = "VIDEO";
+    if (mediaType === "REELS" || mediaType === "VIDEO") {
+      containerPayload.media_type = "REELS";
       containerPayload.video_url = mediaUrl;
+      if (thumbnailUrl) {
+        containerPayload.cover_url = thumbnailUrl;
+      }
     } else {
       containerPayload.image_url = mediaUrl;
     }
@@ -153,8 +161,8 @@ export async function uploadToInstagram(request: UploadRequest, credentials?: In
       return { success: false, error: containerData.error?.message || "Failed to create media container" };
     }
 
-    // Step 2: Poll for processing status (for videos)
-    if (mediaType === "VIDEO") {
+    // Step 2: Poll for processing status (for videos/reels)
+    if (mediaType === "REELS" || mediaType === "VIDEO") {
       let attempts = 0;
       const maxAttempts = 30;
       let statusCode = "IN_PROGRESS";
@@ -355,10 +363,14 @@ export async function fetchPostInsights(options?: {
             });
           }
 
-          // Calculate engagement (likes + comments + shares for Reels, or use engagement metric)
-          const engagement = isReel
-            ? (metricsMap.likes ?? 0) + (metricsMap.comments ?? 0) + (metricsMap.shares ?? 0)
-            : (post.like_count ?? 0) + (post.comments_count ?? 0);
+          // Get individual metrics
+          const likes = isReel ? (metricsMap.likes ?? 0) : (post.like_count ?? 0);
+          const comments = isReel ? (metricsMap.comments ?? 0) : (post.comments_count ?? 0);
+          const shares = metricsMap.shares ?? 0;
+          const saves = metricsMap.saved ?? 0;
+
+          // Calculate engagement (likes + comments + shares)
+          const engagement = likes + comments + shares;
 
           return {
             id: post.id,
@@ -370,8 +382,14 @@ export async function fetchPostInsights(options?: {
             reach: metricsMap.reach ?? 0,
             engagement,
             videoViews: metricsMap.views ?? 0,
+            likes,
+            comments,
+            saves,
+            shares,
           };
         } catch {
+          const likes = post.like_count ?? 0;
+          const comments = post.comments_count ?? 0;
           return {
             id: post.id,
             caption: post.caption || "",
@@ -380,8 +398,12 @@ export async function fetchPostInsights(options?: {
             timestamp: post.timestamp,
             impressions: 0,
             reach: 0,
-            engagement: (post.like_count ?? 0) + (post.comments_count ?? 0),
+            engagement: likes + comments,
             videoViews: 0,
+            likes,
+            comments,
+            saves: 0,
+            shares: 0,
           };
         }
       })
