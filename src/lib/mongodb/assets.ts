@@ -107,7 +107,8 @@ export async function getAssetLibrary(accountId: string): Promise<AssetLibrarySu
     properties: assets.filter(a => a.type === "property"),
     landscapes: assets.filter(a => a.type === "landscape"),
     community: assets.filter(a => a.type === "community"),
-    other: assets.filter(a => !["headshot", "logo", "property", "landscape", "community"].includes(a.type)),
+    regional: assets.filter(a => a.type === "regional"),
+    other: assets.filter(a => !["headshot", "logo", "property", "landscape", "community", "regional"].includes(a.type)),
     total: assets.length,
   };
 }

@@ -50,11 +50,49 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 /**
  * POST /api/accounts/:id/assets
- * Multipart form data with file upload
+ * Supports two modes:
+ * 1. File upload (multipart form data)
+ * 2. URL reference (JSON body with url field)
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: accountId } = await params;
+    const contentType = request.headers.get("content-type") || "";
+
+    // Check if it's a JSON request (URL mode)
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      const { url, name, type, tags, isPrimary } = body;
+
+      if (!url) {
+        return NextResponse.json(
+          { error: "URL is required" },
+          { status: 400 }
+        );
+      }
+
+      if (!type) {
+        return NextResponse.json(
+          { error: "Asset type is required" },
+          { status: 400 }
+        );
+      }
+
+      // Create asset with external URL
+      const asset = await createAsset(accountId, {
+        name: name || new URL(url).pathname.split("/").pop() || "External Image",
+        filename: "external",
+        url,
+        type,
+        tags: tags || [],
+        isPrimary: isPrimary || false,
+        mimeType: "image/external",
+      });
+
+      return NextResponse.json({ data: asset }, { status: 201 });
+    }
+
+    // File upload mode (multipart form data)
     const formData = await request.formData();
 
     const file = formData.get("file") as File | null;

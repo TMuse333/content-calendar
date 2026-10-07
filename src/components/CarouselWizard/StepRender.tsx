@@ -10,7 +10,7 @@ interface StepRenderProps {
   carousel: ScheduledCarousel;
   data: WizardData;
   accountId: string;
-  onComplete: () => void;
+  onComplete: (results: { graphicUrl?: string; graphicUrls?: string[] }) => void;
 }
 
 export function StepRender({
@@ -25,22 +25,28 @@ export function StepRender({
   const [sessionStarted, setSessionStarted] = useState(false);
 
   // Build content payload for Graphics App
+  // This should match what the carousel template expects
   const buildContent = () => {
-    return {
+    // Start with the structured carousel content from the Content step
+    const content: Record<string, unknown> = { ...data.carouselContent };
+
+    // Add metadata that might be useful
+    content._meta = {
       question: data.question,
       level: data.level,
       isEvergreen: data.isEvergreen,
-      uncertaintyAddressed: data.uncertaintyAddressed,
-      format: data.format,
       brief: data.brief,
-      strategyAnswers: data.strategyAnswers,
-      assets: Object.fromEntries(
-        Object.entries(data.assets).map(([key, asset]) => [
-          key,
-          asset ? { url: asset.url, name: asset.name, type: asset.type } : null,
-        ])
-      ),
     };
+
+    // Add asset URLs
+    content._assets = Object.fromEntries(
+      Object.entries(data.assets).map(([key, asset]) => [
+        key,
+        asset ? { url: asset.url, name: asset.name, type: asset.type } : null,
+      ])
+    );
+
+    return content;
   };
 
   // Build agent profile
@@ -95,7 +101,11 @@ export function StepRender({
       switch (event.data.type) {
         case "render-complete":
           if (event.data.postId === carousel.id) {
-            onComplete();
+            // Pass the rendered graphic URLs back to wizard
+            onComplete({
+              graphicUrl: event.data.previewUrl,
+              graphicUrls: event.data.graphicUrls,
+            });
           }
           break;
         case "render-close":

@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Check, Layout } from "lucide-react";
 import type { WizardData, FormatOption } from "./index";
+
+const GRAPHICS_APP_URL = process.env.NEXT_PUBLIC_GRAPHICS_APP_URL || "http://localhost:3003";
 
 interface StepFormatProps {
   data: WizardData;
@@ -60,16 +63,32 @@ export function StepFormat({ data, updateData, formats }: StepFormatProps) {
                   </div>
                 )}
 
-                {/* Format preview placeholder */}
+                {/* Format preview */}
                 <div
-                  className="w-full aspect-square rounded-lg mb-3 flex items-center justify-center"
-                  style={{ backgroundColor: `${format.color}20` }}
+                  className="w-full aspect-[4/5] rounded-lg mb-3 overflow-hidden relative"
+                  style={{ backgroundColor: `${format.color}15` }}
                 >
+                  {format.previewUrl ? (
+                    <img
+                      src={`${GRAPHICS_APP_URL}${format.previewUrl}`}
+                      alt={format.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to icon if image fails
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
                   <div
-                    className="w-16 h-16 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: format.color }}
+                    className={`absolute inset-0 flex items-center justify-center ${format.previewUrl ? 'hidden' : ''}`}
                   >
-                    <Layout className="w-8 h-8 text-white" />
+                    <div
+                      className="w-16 h-16 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: format.color }}
+                    >
+                      <Layout className="w-8 h-8 text-white" />
+                    </div>
                   </div>
                 </div>
 

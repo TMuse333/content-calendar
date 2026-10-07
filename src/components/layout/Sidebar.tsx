@@ -27,6 +27,7 @@ import {
   AlertCircle,
   ExternalLink,
   Layers,
+  FolderCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { useAccount } from "@/contexts/AccountContext";
@@ -127,6 +128,12 @@ export function Sidebar() {
           href: `${accountBase}/assets`,
           icon: Image,
           description: "Photos & media library",
+        },
+        {
+          label: "Portfolio",
+          href: `${accountBase}/portfolio`,
+          icon: FolderCheck,
+          description: "Completed deliverables",
         },
         {
           label: "Results",

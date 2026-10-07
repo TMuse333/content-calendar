@@ -20,6 +20,7 @@ import { StepQuestion } from "./StepQuestion";
 import { StepFormat } from "./StepFormat";
 import { StepAssets } from "./StepAssets";
 import { StepStrategy } from "./StepStrategy";
+import { StepContent } from "./StepContent";
 import { StepRender } from "./StepRender";
 import { StepReview } from "./StepReview";
 
@@ -30,6 +31,7 @@ export interface FormatOption {
   icon: string;
   color: string;
   frames: number;
+  previewUrl?: string;
   mediaRequired: {
     id: string;
     type: string;
@@ -72,7 +74,10 @@ export interface WizardData {
     tone?: string;
   };
 
-  // Step 5-6: Render results
+  // Step 5: Content (actual carousel data)
+  carouselContent: Record<string, unknown>;
+
+  // Step 6-7: Render results
   graphicUrl?: string;
   graphicUrls?: string[];
 }
@@ -85,11 +90,14 @@ interface CarouselWizardProps {
   onSave: (carouselId: string, data: Partial<ScheduledCarousel>) => Promise<void>;
 }
 
+import { Edit3 } from "lucide-react";
+
 const STEPS = [
   { id: "question", label: "Question", icon: MessageSquare },
   { id: "format", label: "Format", icon: Layout },
   { id: "assets", label: "Assets", icon: Image },
   { id: "strategy", label: "Strategy", icon: FileText },
+  { id: "content", label: "Content", icon: Edit3 },
   { id: "render", label: "Render", icon: Play },
   { id: "review", label: "Done", icon: CheckCircle },
 ] as const;
@@ -120,6 +128,7 @@ export function CarouselWizard({
     assets: {},
     strategyAnswers: {},
     brief: carousel.brief || {},
+    carouselContent: {},
     graphicUrl: carousel.graphicUrl,
     graphicUrls: carousel.graphicUrls,
   }));
@@ -195,13 +204,51 @@ export function CarouselWizard({
     setCurrentStep(stepId);
   }, []);
 
-  const handleRenderComplete = useCallback(() => {
+  const handleRenderComplete = useCallback((results: { graphicUrl?: string; graphicUrls?: string[] }) => {
+    // Store the rendered graphics in wizard state
+    setData(prev => ({
+      ...prev,
+      graphicUrl: results.graphicUrl,
+      graphicUrls: results.graphicUrls,
+    }));
     setCurrentStep("review");
   }, []);
 
-  const handleApprove = useCallback(() => {
+  const handleApprove = useCallback(async () => {
+    // Save as deliverable before completing
+    const graphicUrls = data.graphicUrls || (data.graphicUrl ? [data.graphicUrl] : []);
+
+    if (graphicUrls.length > 0) {
+      try {
+        // Save to deliverables
+        await fetch(`/api/accounts/${accountId}/deliverables`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deliveryType: "carousel",
+            title: data.question || "Untitled Carousel",
+            slides: graphicUrls,
+            questionId: carousel.id,
+            formatId: data.format,
+            formatName: data.formatData?.name,
+            entropyLevel: data.level,
+            tags: data.isEvergreen ? ["evergreen"] : [],
+          }),
+        });
+
+        // Also update the carousel record with graphics
+        await onSave(carousel.id, {
+          graphicUrl: data.graphicUrl,
+          graphicUrls: data.graphicUrls,
+          status: "ready",
+        });
+      } catch (error) {
+        console.error("Failed to save deliverable:", error);
+      }
+    }
+
     onComplete(carousel.id);
-  }, [carousel.id, onComplete]);
+  }, [accountId, carousel.id, data, onComplete, onSave]);
 
   // Check if step is complete
   const isStepComplete = (stepId: StepId): boolean => {
@@ -212,13 +259,16 @@ export function CarouselWizard({
         return !!data.format;
       case "assets":
         // Check required assets
-        if (!data.formatData) return true;
+        if (!data.formatData?.mediaRequired) return true;
         const required = data.formatData.mediaRequired.filter((m) => m.required);
         return required.every((m) => data.assets[m.id]);
       case "strategy":
         return true; // Optional
+      case "content":
+        // Check if content has some data
+        return Object.keys(data.carouselContent).length > 0;
       case "render":
-        return !!data.graphicUrl;
+        return !!data.graphicUrl || !!(data.graphicUrls && data.graphicUrls.length > 0);
       case "review":
         return carousel.status === "published";
       default:
@@ -331,6 +381,9 @@ export function CarouselWizard({
               {currentStep === "strategy" && (
                 <StepStrategy data={data} updateData={updateData} />
               )}
+              {currentStep === "content" && (
+                <StepContent data={data} updateData={updateData} />
+              )}
               {currentStep === "render" && (
                 <StepRender
                   carousel={carousel}
@@ -344,7 +397,7 @@ export function CarouselWizard({
                   carousel={carousel}
                   data={data}
                   onApprove={handleApprove}
-                  onRequestChanges={() => setCurrentStep("render")}
+                  onRequestChanges={() => setCurrentStep("content")}
                 />
               )}
             </>

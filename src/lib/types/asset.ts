@@ -16,6 +16,7 @@ export type AssetType =
   | "property"    // Property/listing photo
   | "landscape"   // Scenic/wide shots
   | "community"   // Neighbourhood/lifestyle
+  | "regional"    // Local/regional imagery (PEI landmarks, etc.)
   | "testimonial" // Client photos
   | "icon"        // Custom icons
   | "other";
@@ -89,6 +90,7 @@ export interface AssetLibrarySummary {
   properties: Asset[];
   landscapes: Asset[];
   community: Asset[];
+  regional: Asset[];
   other: Asset[];
   total: number;
 }
@@ -108,7 +110,8 @@ export function groupAssetsByType(assets: Asset[]): AssetLibrarySummary {
     properties: active.filter(a => a.type === "property"),
     landscapes: active.filter(a => a.type === "landscape"),
     community: active.filter(a => a.type === "community"),
-    other: active.filter(a => !["headshot", "logo", "property", "landscape", "community"].includes(a.type)),
+    regional: active.filter(a => a.type === "regional"),
+    other: active.filter(a => !["headshot", "logo", "property", "landscape", "community", "regional"].includes(a.type)),
     total: active.length,
   };
 }

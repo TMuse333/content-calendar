@@ -1,0 +1,258 @@
+{
+  "agent": {
+    "name": "Greg Caseley",
+    "title": "Realtor",
+    "region": "Prince Edward Island",
+    "phone": "902-888-9232",
+    "email": "gcaseleyrealty@gmail.com",
+    "website": "peislandrealty.ca",
+    "brokerage": "RE/MAX Harbourside Realty",
+    "coAgents": [
+      {
+        "name": "Alisha Mackay",
+        "title": "Owner/Realtor®, RE/MAX Harbourside",
+        "phone": "902-315-2712"
+      }
+    ]
+  },
+
+  "brand": {
+    "colors": {
+      "navy": "#0a1628",
+      "paper": "#f8f6f1",
+      "red": "#dc2626",
+      "accent": "#1e3a5f"
+    },
+    "fonts": {
+      "heading": "DM Sans, sans-serif",
+      "body": "DM Sans, sans-serif"
+    },
+    "style": "Professional but approachable. Clean, modern, trustworthy. PEI coastal vibe.",
+    "logo": "RE/MAX balloon logo with 'Harbourside Realty' text"
+  },
+
+  "carouselFormats": [
+    {
+      "id": "MarketPulseCarousel",
+      "name": "Market Pulse",
+      "frames": 5,
+      "audience": "buyers & sellers",
+      "purpose": "Share market stats and trends",
+      "structure": [
+        "Slide 1: Hero image + kicker headline",
+        "Slide 2: Big stat (e.g., avg price)",
+        "Slide 3: Supporting stat with chart",
+        "Slide 4: Another stat with meaning",
+        "Slide 5: CTA + agent headshot"
+      ],
+      "content": {
+        "kicker": "[GREG FILLS IN: e.g., 'Q3 2024 Update']",
+        "headline": { "value": "[GREG: e.g., '$485,000']", "label": "[GREG: e.g., 'Average Selling Price']" },
+        "stats": [
+          { "value": "[GREG]", "label": "[GREG]", "meaning": "[GREG: what this means for buyers/sellers]" },
+          { "value": "[GREG]", "label": "[GREG]", "meaning": "[GREG]" },
+          { "value": "[GREG]", "label": "[GREG]", "meaning": "[GREG]" }
+        ],
+        "close": {
+          "buyers": "[GREG: advice for buyers]",
+          "sellers": "[GREG: advice for sellers]",
+          "cta": "[GREG: e.g., 'DM me for your area's numbers']"
+        }
+      }
+    },
+    {
+      "id": "NeighbourhoodGuideCarousel",
+      "name": "Neighbourhood Guide",
+      "frames": 7,
+      "audience": "buyers",
+      "purpose": "Showcase a specific area/neighbourhood",
+      "structure": [
+        "Slide 1: Cover with place name",
+        "Slide 2: Map showing location",
+        "Slide 3-6: Q&A about the area (4 questions)",
+        "Slide 7: Price range + CTA + headshot"
+      ],
+      "content": {
+        "place": "[GREG: e.g., 'Stratford']",
+        "region": "[GREG: e.g., 'Greater Charlottetown']",
+        "driveTimes": [
+          { "to": "[GREG: e.g., 'Downtown Charlottetown']", "minutes": "[GREG]" },
+          { "to": "[GREG: e.g., 'Airport']", "minutes": "[GREG]" }
+        ],
+        "qa": [
+          { "q": "[GREG: e.g., 'What's the vibe?']", "a": "[GREG]" },
+          { "q": "[GREG: e.g., 'Schools?']", "a": "[GREG]" },
+          { "q": "[GREG: e.g., 'Best for...?']", "a": "[GREG]" },
+          { "q": "[GREG: e.g., 'Hidden gems?']", "a": "[GREG]" }
+        ],
+        "priceRange": "[GREG: e.g., '$350K - $550K']",
+        "cta": "[GREG: e.g., 'Curious about Stratford? Let's chat.']"
+      }
+    },
+    {
+      "id": "ProcessTimelineCarousel",
+      "name": "Process Timeline",
+      "frames": 10,
+      "audience": "buyers",
+      "purpose": "Explain a process step-by-step",
+      "structure": [
+        "Slide 1: Title + total timeline",
+        "Slide 2-9: Steps (8 steps, each with Q&A)",
+        "Slide 10: CTA + headshot"
+      ],
+      "content": {
+        "title": "[GREG: e.g., 'Buying a Home in PEI']",
+        "totalTimeline": "[GREG: e.g., '30-60 days typical']",
+        "steps": [
+          { "title": "[GREG: e.g., 'Get Pre-Approved']", "duration": "[GREG: e.g., '1-3 days']", "q": "[GREG: common question about this step]", "a": "[GREG: answer]" },
+          { "title": "[GREG]", "duration": "[GREG]", "q": "[GREG]", "a": "[GREG]" },
+          { "title": "[GREG]", "duration": "[GREG]", "q": "[GREG]", "a": "[GREG]" },
+          { "title": "[GREG]", "duration": "[GREG]", "q": "[GREG]", "a": "[GREG]" },
+          { "title": "[GREG]", "duration": "[GREG]", "q": "[GREG]", "a": "[GREG]" },
+          { "title": "[GREG]", "duration": "[GREG]", "q": "[GREG]", "a": "[GREG]" },
+          { "title": "[GREG]", "duration": "[GREG]", "q": "[GREG]", "a": "[GREG]" },
+          { "title": "[GREG]", "duration": "[GREG]", "q": "[GREG]", "a": "[GREG]" }
+        ],
+        "cta": "[GREG]"
+      }
+    },
+    {
+      "id": "MythVsFactCarousel",
+      "name": "Myth vs Fact",
+      "frames": 6,
+      "audience": "sellers",
+      "purpose": "Debunk common misconceptions",
+      "structure": [
+        "Slide 1: Title (red tone, attention-grabbing)",
+        "Slide 2-5: Myth/Fact pairs (4 items)",
+        "Slide 6: CTA + headshot"
+      ],
+      "content": {
+        "title": "[GREG: e.g., '5 Things Sellers Get Wrong']",
+        "items": [
+          { "myth": "[GREG: e.g., 'Spring is the only time to sell']", "fact": "[GREG: the truth]" },
+          { "myth": "[GREG]", "fact": "[GREG]" },
+          { "myth": "[GREG]", "fact": "[GREG]" },
+          { "myth": "[GREG]", "fact": "[GREG]" }
+        ],
+        "cta": "[GREG]"
+      }
+    },
+    {
+      "id": "ClientQuestionsCarousel",
+      "name": "Client Questions",
+      "frames": 5,
+      "audience": "buyers & sellers",
+      "purpose": "Answer real questions from clients",
+      "structure": [
+        "Slide 1: Title/hook",
+        "Slide 2-4: Q&A slides (3 questions)",
+        "Slide 5: Testimonial or CTA + headshot"
+      ],
+      "content": {
+        "title": "[GREG: e.g., 'Questions I Got This Month']",
+        "questions": [
+          { "q": "[GREG: e.g., 'How much deposit do I need?']", "a": "[GREG: answer]" },
+          { "q": "[GREG]", "a": "[GREG]" },
+          { "q": "[GREG]", "a": "[GREG]" }
+        ],
+        "testimonial": {
+          "quote": "[GREG: optional client quote]",
+          "client": "[GREG: client name]",
+          "town": "[GREG: e.g., 'Stratford']"
+        },
+        "cta": "[GREG: e.g., 'What's your question? DM me.']"
+      }
+    },
+    {
+      "id": "ThisOrThatCarousel",
+      "name": "This or That",
+      "frames": 7,
+      "audience": "buyers",
+      "purpose": "Compare two options side-by-side",
+      "structure": [
+        "Slide 1: Title with both options",
+        "Slide 2-6: Comparison rows (5 criteria)",
+        "Slide 7: Verdict + CTA + headshot"
+      ],
+      "content": {
+        "a": { "label": "[GREG: e.g., 'Cottage']" },
+        "b": { "label": "[GREG: e.g., 'Year-Round Home']" },
+        "rows": [
+          { "criterion": "[GREG: e.g., 'Price Range']", "a": "[GREG]", "b": "[GREG]", "winner": "[GREG: 'a', 'b', or 'tie']" },
+          { "criterion": "[GREG]", "a": "[GREG]", "b": "[GREG]", "winner": "[GREG]" },
+          { "criterion": "[GREG]", "a": "[GREG]", "b": "[GREG]", "winner": "[GREG]" },
+          { "criterion": "[GREG]", "a": "[GREG]", "b": "[GREG]", "winner": "[GREG]" },
+          { "criterion": "[GREG]", "a": "[GREG]", "b": "[GREG]", "winner": "[GREG]" }
+        ],
+        "cta": "[GREG: e.g., 'Which fits your lifestyle? Let's explore both.']"
+      }
+    },
+    {
+      "id": "BuyerObjectionsCarousel",
+      "name": "Buyer Objections",
+      "frames": 7,
+      "audience": "buyers",
+      "purpose": "Address fears and objections",
+      "structure": [
+        "Slide 1: Title (the objection theme)",
+        "Slide 2-6: Objection + response (5 items)",
+        "Slide 7: CTA + headshot"
+      ],
+      "content": {
+        "title": "[GREG: e.g., 'Worried About Conditions?']",
+        "items": [
+          { "objection": "[GREG: e.g., 'What if my financing falls through?']", "response": "[GREG: reassuring answer]" },
+          { "objection": "[GREG]", "response": "[GREG]" },
+          { "objection": "[GREG]", "response": "[GREG]" },
+          { "objection": "[GREG]", "response": "[GREG]" },
+          { "objection": "[GREG]", "response": "[GREG]" }
+        ],
+        "cta": "[GREG]"
+      }
+    }
+  ],
+
+  "entropyFramework": {
+    "description": "Content should reduce uncertainty at the right level. Carousels work best at L3, L5, L6.",
+    "levels": {
+      "L1": { "name": "Identity", "question": "Who are you?", "tone": "professional, established" },
+      "L2": { "name": "Offer", "question": "Is this for me?", "tone": "inviting, clear" },
+      "L3": { "name": "Process", "question": "What are the steps?", "tone": "clear, step-by-step, demystifying", "carouselSweetSpot": true },
+      "L4": { "name": "Proof", "question": "Can I trust you?", "tone": "trustworthy, proven" },
+      "L5": { "name": "Expertise", "question": "What do I need to know?", "tone": "authoritative, detailed, insider", "carouselSweetSpot": true },
+      "L6": { "name": "Situations", "question": "What if X happens?", "tone": "empathetic, reassuring, specific", "carouselSweetSpot": true },
+      "L7": { "name": "Personality", "question": "What's it like working with you?", "tone": "warm, personal, authentic" }
+    }
+  },
+
+  "designGuidance": {
+    "hooks": [
+      "Most people think [myth]. Here's the truth.",
+      "What actually happens when you [process]",
+      "The question I get asked most",
+      "What if [scenario]?",
+      "[X] steps to [outcome]"
+    ],
+    "literaryDevices": [
+      "contrast (myth vs fact, before vs after)",
+      "rule of three",
+      "open loop (create curiosity)",
+      "specificity (exact numbers, real examples)",
+      "social proof (testimonials, stats)"
+    ],
+    "visualRules": [
+      "Navy (#0a1628) for dark frames, Paper (#f8f6f1) for light",
+      "Large, bold numbers for stats",
+      "Greg's headshot on final slide",
+      "RE/MAX logo subtle but present",
+      "1080x1350 Instagram carousel size"
+    ]
+  },
+
+  "peiContext": {
+    "areas": ["Charlottetown", "Stratford", "Cornwall", "Summerside", "North Shore", "Cavendish", "North Rustico", "Brackley", "Kensington", "Montague"],
+    "marketNotes": "Small market, everyone knows everyone. Seasonal cottage market. Strong demand from out-of-province buyers (Ontario, Alberta). Limited inventory.",
+    "commonBuyerTypes": ["First-time buyers", "Retirees relocating", "Cottage seekers", "Investment buyers", "Moving from mainland"]
+  }
+}
