@@ -9,25 +9,14 @@ import {
   ChevronRight,
   Zap,
   LayoutDashboard,
-  Clock,
-  PlusCircle,
-  Shield,
-  Grid,
   Sparkles,
-  Target,
   StickyNote,
-  Clapperboard,
-  Palette,
-  GitBranch,
-  BookOpen,
   TrendingUp,
-  Image,
+  Grid,
   UserPlus,
   CheckCircle,
   AlertCircle,
   ExternalLink,
-  Layers,
-  FolderCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { useAccount } from "@/contexts/AccountContext";
@@ -53,28 +42,28 @@ export function Sidebar() {
   const accountId = currentAccount?.id;
   const accountBase = accountId ? `/account/${accountId}` : "";
 
-  // Account-scoped navigation
+  // Simplified navigation - only what we need
   const accountNavSections: NavSection[] = [
     {
-      title: "Content",
+      title: "Core",
       items: [
+        {
+          label: "Dashboard",
+          href: `${accountBase}/dashboard`,
+          icon: LayoutDashboard,
+          description: "Kickoff & overview",
+        },
         {
           label: "Calendar",
           href: `${accountBase}/calendar`,
           icon: Calendar,
-          description: "Schedule & view posts",
+          description: "Schedule & posts",
         },
         {
-          label: "New Post",
-          href: `${accountBase}/post/new`,
-          icon: PlusCircle,
-          description: "Create content",
-        },
-        {
-          label: "Queue",
-          href: `${accountBase}/queue`,
-          icon: Clock,
-          description: "Drafts & scheduled",
+          label: "Insights",
+          href: `${accountBase}/insights`,
+          icon: Sparkles,
+          description: "Post performance",
         },
       ],
     },
@@ -82,70 +71,22 @@ export function Sidebar() {
       title: "Strategy",
       items: [
         {
-          label: "Dashboard",
-          href: `${accountBase}/dashboard`,
-          icon: LayoutDashboard,
-          description: "Coverage & campaigns",
-        },
-        {
-          label: "Campaigns",
-          href: `${accountBase}/campaigns`,
-          icon: Target,
-          description: "Content strategy",
+          label: "Results",
+          href: `${accountBase}/results`,
+          icon: TrendingUp,
+          description: "What we achieved",
         },
         {
           label: "Library",
           href: `${accountBase}/library`,
           icon: Grid,
-          description: "All synced posts",
-        },
-        {
-          label: "Insights",
-          href: `${accountBase}/insights`,
-          icon: Sparkles,
-          description: "AI content analysis",
+          description: "All posts",
         },
         {
           label: "Notes",
           href: `${accountBase}/notes`,
           icon: StickyNote,
-          description: "Strategy notes & ideas",
-        },
-        {
-          label: "Packages",
-          href: `${accountBase}/packages`,
-          icon: Clapperboard,
-          description: "Video series & episodes",
-        },
-        {
-          label: "Graphics",
-          href: `${accountBase}/graphics`,
-          icon: Palette,
-          description: "Client graphic packages",
-        },
-        {
-          label: "Assets",
-          href: `${accountBase}/assets`,
-          icon: Image,
-          description: "Photos & media library",
-        },
-        {
-          label: "Portfolio",
-          href: `${accountBase}/portfolio`,
-          icon: FolderCheck,
-          description: "Completed deliverables",
-        },
-        {
-          label: "Results",
-          href: `${accountBase}/results`,
-          icon: TrendingUp,
-          description: "Outcomes & ROI",
-        },
-        {
-          label: "Pipeline",
-          href: `${accountBase}/pipeline`,
-          icon: GitBranch,
-          description: "Connected apps & workflow",
+          description: "Monthly notes",
         },
       ],
     },
@@ -156,33 +97,9 @@ export function Sidebar() {
           label: "Account",
           href: `${accountBase}/settings`,
           icon: Settings,
-          description: "Campaigns & platforms",
+          description: "Configuration",
         },
       ],
-    },
-  ];
-
-  const globalNavItems: NavItem[] = [
-    {
-      label: "Entropy Levels",
-      href: "/entropy",
-      icon: Layers,
-      description: "Content strategy framework",
-    },
-    {
-      label: "Playbooks",
-      href: "/playbooks",
-      icon: BookOpen,
-      description: "Strategy frameworks",
-    },
-  ];
-
-  const adminNavItems: NavItem[] = [
-    {
-      label: "Admin",
-      href: "/admin",
-      icon: Shield,
-      description: "All accounts",
     },
   ];
 
@@ -279,102 +196,12 @@ export function Sidebar() {
         )}
       </nav>
 
-      {/* Global Navigation */}
-      <div className="border-t border-slate-800 py-2 px-2">
-        {!isCollapsed && (
-          <p className="px-2 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-            Global
-          </p>
-        )}
-        <div className="space-y-0.5">
-          {globalNavItems.map((item) => {
-            const isActive = isActiveLink(item.href);
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
-                  ${
-                    isActive
-                      ? "bg-purple-500/10 text-purple-400"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800"
-                  }
-                `}
-                title={isCollapsed ? item.label : undefined}
-              >
-                <Icon
-                  className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-purple-400" : ""}`}
-                />
-                {!isCollapsed && (
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium">{item.label}</span>
-                    {item.description && (
-                      <p className="text-[10px] text-slate-500 truncate">
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Admin Navigation */}
-      <div className="border-t border-slate-800 py-2 px-2">
-        {!isCollapsed && (
-          <p className="px-2 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-            Admin
-          </p>
-        )}
-        <div className="space-y-0.5">
-          {adminNavItems.map((item) => {
-            const isActive = isActiveLink(item.href);
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
-                  ${
-                    isActive
-                      ? "bg-amber-500/10 text-amber-400"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800"
-                  }
-                `}
-                title={isCollapsed ? item.label : undefined}
-              >
-                <Icon
-                  className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-amber-400" : ""}`}
-                />
-                {!isCollapsed && (
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium">{item.label}</span>
-                    {item.description && (
-                      <p className="text-[10px] text-slate-500 truncate">
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Onboarding Status */}
       {currentAccount && (
         <div className="border-t border-slate-800 p-2">
           {!isCollapsed && (
             <p className="px-2 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              Client Onboarding
+              Client Status
             </p>
           )}
           <div className="space-y-1">

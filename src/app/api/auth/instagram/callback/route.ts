@@ -41,33 +41,44 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
 
-  // Handle OAuth errors
-  if (error) {
-    console.error("OAuth error:", error, errorDescription);
-    return NextResponse.redirect(
-      new URL(`/settings?error=${encodeURIComponent(errorDescription || error)}`, request.nextUrl.origin)
-    );
-  }
-
-  if (!code || !state) {
-    return NextResponse.redirect(
-      new URL("/settings?error=Missing+code+or+state", request.nextUrl.origin)
-    );
-  }
-
-  // Decode state to get accountId, optional targetUsername, and source
+  // Decode state first to get source for error redirects
   let accountId: string;
   let targetUsername: string | undefined;
   let source: string | undefined;
-  try {
-    const decoded = JSON.parse(Buffer.from(state, "base64").toString());
-    accountId = decoded.accountId;
-    targetUsername = decoded.targetUsername;
-    source = decoded.source;
-  } catch {
+
+  if (state) {
+    try {
+      const decoded = JSON.parse(Buffer.from(state, "base64").toString());
+      accountId = decoded.accountId;
+      targetUsername = decoded.targetUsername;
+      source = decoded.source;
+    } catch {
+      return NextResponse.redirect(
+        new URL("/settings?error=Invalid+state", request.nextUrl.origin)
+      );
+    }
+  } else {
     return NextResponse.redirect(
-      new URL("/settings?error=Invalid+state", request.nextUrl.origin)
+      new URL("/settings?error=Missing+state", request.nextUrl.origin)
     );
+  }
+
+  // Helper for error redirects
+  const errorRedirect = (msg: string) => {
+    const path = source === "onboard"
+      ? `/onboard/${accountId}?error=${encodeURIComponent(msg)}`
+      : `/settings?error=${encodeURIComponent(msg)}`;
+    return NextResponse.redirect(new URL(path, request.nextUrl.origin));
+  };
+
+  // Handle OAuth errors
+  if (error) {
+    console.error("OAuth error:", error, errorDescription);
+    return errorRedirect(errorDescription || error);
+  }
+
+  if (!code) {
+    return errorRedirect("Missing authorization code");
   }
 
   const appId = process.env.INSTAGRAM_APP_ID;
@@ -75,15 +86,11 @@ export async function GET(request: NextRequest) {
   const mongoUri = process.env.MONGODB_URI;
 
   if (!appId || !appSecret) {
-    return NextResponse.redirect(
-      new URL("/settings?error=App+credentials+not+configured", request.nextUrl.origin)
-    );
+    return errorRedirect("App not configured. Contact support.");
   }
 
   if (!mongoUri) {
-    return NextResponse.redirect(
-      new URL("/settings?error=Database+not+configured", request.nextUrl.origin)
-    );
+    return errorRedirect("Database not configured. Contact support.");
   }
 
   const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin;
@@ -102,9 +109,7 @@ export async function GET(request: NextRequest) {
 
     if (tokenData.error) {
       console.error("Token exchange error:", tokenData.error);
-      return NextResponse.redirect(
-        new URL(`/settings?error=${encodeURIComponent(tokenData.error.message)}`, request.nextUrl.origin)
-      );
+      return errorRedirect("Connection failed. Please try again.");
     }
 
     const shortLivedToken = tokenData.access_token;
@@ -121,9 +126,7 @@ export async function GET(request: NextRequest) {
 
     if (longLivedData.error) {
       console.error("Long-lived token error:", longLivedData.error);
-      return NextResponse.redirect(
-        new URL(`/settings?error=${encodeURIComponent(longLivedData.error.message)}`, request.nextUrl.origin)
-      );
+      return errorRedirect("Connection failed. Please try again.");
     }
 
     const longLivedToken = longLivedData.access_token;
@@ -137,9 +140,7 @@ export async function GET(request: NextRequest) {
 
     if (pagesData.error) {
       console.error("Pages fetch error:", pagesData.error);
-      return NextResponse.redirect(
-        new URL(`/settings?error=${encodeURIComponent(pagesData.error.message)}`, request.nextUrl.origin)
-      );
+      return errorRedirect("Could not access your Facebook Pages. Please try again.");
     }
 
     // Get all pages with Instagram Business Accounts
@@ -148,12 +149,7 @@ export async function GET(request: NextRequest) {
     ) || [];
 
     if (pagesWithInstagram.length === 0) {
-      return NextResponse.redirect(
-        new URL(
-          "/settings?error=No+Instagram+Business+Account+found.+Make+sure+your+Instagram+is+connected+to+a+Facebook+Page.",
-          request.nextUrl.origin
-        )
-      );
+      return errorRedirect("No Instagram Business Account found. Make sure your Instagram is linked to a Facebook Page (see Step 3).");
     }
 
     // Check if account already has an Instagram userId - try to match it
@@ -241,9 +237,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(successUrl.toString());
   } catch (err) {
     console.error("OAuth callback error:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.redirect(
-      new URL(`/settings?error=${encodeURIComponent(message)}`, request.nextUrl.origin)
-    );
+    return errorRedirect("Something went wrong. Please try again.");
   }
 }
