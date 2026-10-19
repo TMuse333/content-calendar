@@ -26,7 +26,7 @@ export type {
 // POSTS
 // ============================================================================
 
-export type PostStatus = "draft" | "scheduled" | "posted" | "failed";
+export type MongoPostStatus = "draft" | "scheduled" | "posted" | "failed";
 export type MediaType = "image" | "video" | "carousel";
 export type ContentSourceType = "upload" | "listing-graphics" | "video-system";
 
@@ -57,7 +57,7 @@ export interface Post {
   // Platform & scheduling
   platform: "instagram" | "youtube" | "tiktok";
   scheduledFor?: Date;
-  status: PostStatus;
+  status: MongoPostStatus;
 
   // After posting
   postedAt?: Date;
@@ -128,7 +128,7 @@ export interface CreatePostRequest {
   deliveryNotes?: string;
   platform: "instagram" | "youtube" | "tiktok";
   scheduledFor?: string; // ISO date string
-  status?: PostStatus;
+  status?: MongoPostStatus;
 }
 
 export interface UpdatePostRequest {
@@ -139,5 +139,5 @@ export interface UpdatePostRequest {
   underlyingNeed?: string;
   deliveryNotes?: string;
   scheduledFor?: string;
-  status?: PostStatus;
+  status?: MongoPostStatus;
 }
