@@ -5,7 +5,7 @@
  *
  * Updates post status in Notion:
  * - "approve" → status becomes "Approved"
- * - "request-changes" → status stays "Ready for Review" (could add comment)
+ * - "request-changes" → status stays "Ready for review" (could add comment)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -56,7 +56,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // 4. Check if post is reviewable
-    if (post.status !== "Ready for Review") {
+    if (post.status !== "Ready for review") {
       return NextResponse.json(
         { error: "This post is not available for review" },
         { status: 400 }
@@ -81,7 +81,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       // For "request-changes", keep as Ready for Review
       // The comment could be stored in a separate field
       // For now, we just acknowledge the request
-      newStatus = "Ready for Review";
+      newStatus = "Ready for review";
     }
 
     // 7. Update in Notion (only if approving)

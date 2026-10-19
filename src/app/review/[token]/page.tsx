@@ -160,16 +160,16 @@ export default function ReviewPortalPage() {
             <CheckCircle2 className="w-3 h-3" /> Approved
           </span>
         );
-      case "Ready for Review":
+      case "Ready for review":
         return (
           <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full">
-            <Clock className="w-3 h-3" /> Ready for Review
+            <Clock className="w-3 h-3" /> Ready for review
           </span>
         );
-      case "Published":
+      case "Posted":
         return (
           <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded-full">
-            <Check className="w-3 h-3" /> Published
+            <Check className="w-3 h-3" /> Posted
           </span>
         );
       case "Scheduled":
@@ -191,9 +191,18 @@ export default function ReviewPortalPage() {
     <div className="min-h-screen bg-slate-950">
       {/* Header */}
       <header className="bg-slate-900 border-b border-slate-800 px-4 py-4 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-lg font-bold text-white">{account.name}</h1>
-          <p className="text-sm text-slate-400">Content Review Portal</p>
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-white">{account.name}</h1>
+            <p className="text-sm text-slate-400">Content Review Portal</p>
+          </div>
+          <a
+            href={`/review/${token}/calendar`}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <Calendar className="w-4 h-4" />
+            Calendar
+          </a>
         </div>
       </header>
 

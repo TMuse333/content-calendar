@@ -6,7 +6,7 @@
  * Data flow:
  * - Account info from MongoDB (has reviewPortal.token)
  * - Posts from Notion (reads Posts db via account.notion config)
- * - Shows posts with status "Ready for Review"
+ * - Shows posts with status "Ready for review"
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -83,9 +83,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }));
 
     // 7. Categorize posts by status
-    const needsReview = clientPosts.filter(p => p.status === "Ready for Review");
+    const needsReview = clientPosts.filter(p => p.status === "Ready for review");
     const approved = clientPosts.filter(p => p.status === "Approved");
-    const published = clientPosts.filter(p => p.status === "Published" || p.status === "Scheduled");
+    const published = clientPosts.filter(p => p.status === "Posted" || p.status === "Scheduled");
 
     // 8. Build response
     const isPaid = account.billing?.status === "paid";

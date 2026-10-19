@@ -45,6 +45,12 @@ function extractSelect(prop: unknown): string | undefined {
   return p.select?.name;
 }
 
+function extractStatus(prop: unknown): string | undefined {
+  if (!prop || typeof prop !== "object") return undefined;
+  const p = prop as { status?: { name?: string } };
+  return p.status?.name;
+}
+
 function extractMultiSelect(prop: unknown): string[] {
   if (!prop || typeof prop !== "object") return [];
   const p = prop as { multi_select?: Array<{ name: string }> };
@@ -143,7 +149,7 @@ function parsePost(page: unknown): NotionPost {
   return {
     id: p.id,
     title: extractTitle(props["Post"]),
-    status: extractSelect(props["Status"]) as PostStatus ?? "Idea",
+    status: extractStatus(props["Status"]) as PostStatus ?? "Idea",
     type: extractSelect(props["Type"]) as PostType | undefined,
     topicId: extractRelation(props["Topic"])[0],
     questionAnswered: extractRichText(props["Question answered"]),
@@ -228,7 +234,7 @@ function parseTopic(page: unknown): Topic {
     localAngle: extractRichText(props["Local angle"]),
     fromLibraryId: extractRelation(props["From library"])[0],
     source: extractSelect(props["Source"]),
-    status: extractSelect(props["Status"]) as TopicStatus ?? "Idea",
+    status: extractStatus(props["Status"]) as TopicStatus ?? "Idea",
     priority: extractSelect(props["Priority"]) as "High" | "Medium" | "Low" | undefined,
     postIds: extractRelation(props["Posts"]),
   };
@@ -263,7 +269,7 @@ export async function updatePostStatus(
     page_id: postId,
     properties: {
       Status: {
-        select: { name: newStatus },
+        status: { name: newStatus },
       },
     },
   });
@@ -296,10 +302,10 @@ export async function getPostsSummary(config: NotionConfig): Promise<PostsSummar
     byStatus: {
       "Idea": 0,
       "Drafting": 0,
-      "Ready for Review": 0,
+      "Ready for review": 0,
       "Approved": 0,
       "Scheduled": 0,
-      "Published": 0,
+      "Posted": 0,
       "Archived": 0,
     },
     byLevel: {},
@@ -324,8 +330,8 @@ export async function getPostsSummary(config: NotionConfig): Promise<PostsSummar
     }
   }
 
-  summary.readyForReview = summary.byStatus["Ready for Review"] || 0;
-  summary.published = summary.byStatus["Published"] || 0;
+  summary.readyForReview = summary.byStatus["Ready for review"] || 0;
+  summary.published = summary.byStatus["Posted"] || 0;
 
   return summary;
 }
