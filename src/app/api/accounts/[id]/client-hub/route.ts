@@ -79,7 +79,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           const postsAtStage = topicPosts.filter(
             (p) =>
               p.decisionStage === ds.key &&
-              (p.status === "Published" ||
+              (p.status === "Posted" ||
                 p.status === "Scheduled" ||
                 p.status === "Approved")
           );
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // 5. Posts needing review (client-safe fields only)
     const needsReview = allPosts
-      .filter((p) => p.status === "Ready for Review")
+      .filter((p) => p.status === "Ready for review")
       .map((p) => ({
         id: p.id,
         title: p.title,
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // 6. Posted content (client-safe fields only)
     const posted = allPosts
-      .filter((p) => p.status === "Published" || p.status === "Scheduled")
+      .filter((p) => p.status === "Posted" || p.status === "Scheduled")
       .map((p) => ({
         id: p.id,
         title: p.title,
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         .length,
       topicsCovered: topicsWithCoverage.filter((t) => t.status === "Covered")
         .length,
-      postsPublished: allPosts.filter((p) => p.status === "Published").length,
+      postsPublished: allPosts.filter((p) => p.status === "Posted").length,
       postsScheduled: allPosts.filter((p) => p.status === "Scheduled").length,
       postsNeedingReview: needsReview.length,
     };
@@ -165,6 +165,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         id: account.id,
         name: account.name,
         handle: account.handle,
+      },
+      instagram: {
+        connected: account.platforms?.instagram?.connected ?? false,
+        username: account.platforms?.instagram?.username,
       },
       topics: topicsWithCoverage,
       topicNames,

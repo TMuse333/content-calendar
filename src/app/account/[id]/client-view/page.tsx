@@ -6,6 +6,7 @@ import {
   Target,
   Clock,
   Calendar,
+  CalendarDays,
   TrendingUp,
   Loader2,
   AlertCircle,
@@ -13,12 +14,32 @@ import {
   CheckCircle2,
   Circle,
   ChevronRight,
+  ChevronLeft,
   MessageSquare,
   Eye,
   FileText,
   X,
   Send,
+  Video,
+  Image,
+  LayoutGrid,
+  Filter,
+  ExternalLink,
+  Heart,
+  MessageCircle,
+  Bookmark,
+  Camera,
+  Link,
 } from "lucide-react";
+
+// Instagram icon as custom SVG (lucide doesn't have it)
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+    </svg>
+  );
+}
 
 // =============================================================================
 // TYPES (client-safe only)
@@ -79,6 +100,10 @@ interface ClientHubData {
     name: string;
     handle?: string;
   };
+  instagram: {
+    connected: boolean;
+    username?: string;
+  };
   topics: TopicWithCoverage[];
   topicNames: Record<string, string>;
   needsReview: ReviewPost[];
@@ -92,12 +117,13 @@ interface ClientHubData {
   };
 }
 
-type TabId = "topics" | "review" | "posted" | "results";
+type TabId = "topics" | "review" | "posted" | "calendar" | "results";
 
 const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
   { id: "topics", label: "Topics", icon: Target },
   { id: "review", label: "Review", icon: Clock },
   { id: "posted", label: "Posted", icon: Calendar },
+  { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "results", label: "Results", icon: TrendingUp },
 ];
 
@@ -218,6 +244,34 @@ export default function ClientHubPage() {
           })}
         </nav>
 
+        {/* Instagram Connection Status */}
+        <div className="p-4 border-t border-slate-800">
+          {data.instagram?.connected ? (
+            <div className="flex items-center gap-3 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+              <InstagramIcon className="w-5 h-5 text-emerald-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-emerald-400">Connected</p>
+                <p className="text-xs text-slate-400 truncate">
+                  @{data.instagram.username}
+                </p>
+              </div>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            </div>
+          ) : (
+            <a
+              href={`/api/auth/instagram/connect?accountId=${accountId}&source=client-view`}
+              className="flex items-center gap-3 px-3 py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 rounded-lg transition-all group"
+            >
+              <InstagramIcon className="w-5 h-5 text-white" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white">Connect Instagram</p>
+                <p className="text-xs text-white/70">Enable post sync</p>
+              </div>
+              <Link className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
+            </a>
+          )}
+        </div>
+
         {/* Quick Stats */}
         <div className="p-4 border-t border-slate-800">
           <div className="grid grid-cols-2 gap-2 text-center">
@@ -257,6 +311,9 @@ export default function ClientHubPage() {
           )}
           {activeTab === "posted" && (
             <PostedTab posts={data.posted} topicNames={data.topicNames} />
+          )}
+          {activeTab === "calendar" && (
+            <CalendarTab accountId={accountId} />
           )}
           {activeTab === "results" && <ResultsTab data={data} />}
         </div>
@@ -444,9 +501,18 @@ function ReviewTab({
   const handleAction = async (postId: string, action: "approve" | "request-changes") => {
     setSubmitting(true);
     try {
-      // We need a review token for this - for now just show success
-      // In production, this would call the review API
-      await new Promise((r) => setTimeout(r, 800));
+      const res = await fetch(`/api/accounts/${accountId}/posts/${postId}/review`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, comment: comment || undefined }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Review action failed:", err);
+        return;
+      }
+
       setSelectedPost(null);
       setComment("");
       onRefresh();
@@ -725,7 +791,7 @@ function PostedTab({
                 <div className="mt-2 flex items-center gap-2">
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full ${
-                      post.status === "Published"
+                      post.status === "Posted"
                         ? "bg-emerald-500/20 text-emerald-400"
                         : "bg-blue-500/20 text-blue-400"
                     }`}
@@ -829,6 +895,412 @@ function ResultsTab({ data }: { data: ClientHubData }) {
         <p className="text-slate-400 text-sm">
           DM tracking and booking analytics coming soon.
         </p>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// CALENDAR TAB
+// =============================================================================
+
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+type CalendarFilter = "all" | "posts" | "scheduled";
+
+interface CalendarPost {
+  id: string;
+  title: string;
+  caption?: string;
+  status: string;
+  type?: string;
+  previewUrl?: string;
+  postedAt?: string;
+  scheduledFor?: string;
+}
+
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getFirstDayOfMonth(year: number, month: number) {
+  const day = new Date(year, month, 1).getDay();
+  return day === 0 ? 6 : day - 1;
+}
+
+function CalendarTab({ accountId }: { accountId: string }) {
+  const today = new Date();
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [posts, setPosts] = useState<CalendarPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<CalendarFilter>("all");
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<CalendarPost | null>(null);
+
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+  const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
+
+  // Fetch posts for calendar (Notion scheduled + Instagram posted)
+  useEffect(() => {
+    const fetchCalendarPosts = async () => {
+      setLoading(true);
+      try {
+        const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}`;
+        const res = await fetch(`/api/accounts/${accountId}/calendar?month=${monthStr}`);
+        const data = await res.json();
+        if (data?.posts) {
+          setPosts(data.posts);
+        }
+      } catch (error) {
+        console.error("Failed to fetch calendar posts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCalendarPosts();
+  }, [accountId, currentMonth, currentYear]);
+
+  const prevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const nextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const goToToday = () => {
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
+  };
+
+  // Get posts for a specific day
+  const getPostsForDay = (day: number) => {
+    return posts.filter((post) => {
+      const dateStr = post.postedAt || post.scheduledFor;
+      if (!dateStr) return false;
+      const postDate = new Date(dateStr);
+      return (
+        postDate.getDate() === day &&
+        postDate.getMonth() === currentMonth &&
+        postDate.getFullYear() === currentYear
+      );
+    }).filter((post) => {
+      if (filter === "all") return true;
+      if (filter === "posts") return post.status === "Posted";
+      if (filter === "scheduled") return post.status === "Scheduled";
+      return true;
+    });
+  };
+
+  const calendarDays: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) {
+    calendarDays.push(null);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    calendarDays.push(day);
+  }
+
+  const isToday = (day: number) => {
+    return (
+      day === today.getDate() &&
+      currentMonth === today.getMonth() &&
+      currentYear === today.getFullYear()
+    );
+  };
+
+  const filterOptions: { value: CalendarFilter; label: string }[] = [
+    { value: "all", label: "All Content" },
+    { value: "posts", label: "Published" },
+    { value: "scheduled", label: "Scheduled" },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold text-white">
+            {MONTHS[currentMonth]} {currentYear}
+          </h2>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={prevMonth}
+              className="p-1.5 hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5 text-slate-400" />
+            </button>
+            <button
+              onClick={nextMonth}
+              className="p-1.5 hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <ChevronRight className="w-5 h-5 text-slate-400" />
+            </button>
+          </div>
+          <button
+            onClick={goToToday}
+            className="px-3 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            Today
+          </button>
+        </div>
+
+        {/* Filter Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowFilterMenu(!showFilterMenu)}
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              filter !== "all"
+                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                : "bg-slate-800 text-slate-400 hover:text-white"
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            {filterOptions.find(o => o.value === filter)?.label}
+          </button>
+
+          {showFilterMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowFilterMenu(false)}
+              />
+              <div className="absolute right-0 top-full mt-1 w-36 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-20 overflow-hidden">
+                {filterOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setFilter(option.value);
+                      setShowFilterMenu(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                      filter === option.value
+                        ? "bg-emerald-500/20 text-emerald-400"
+                        : "text-slate-300 hover:bg-slate-700"
+                    }`}
+                  >
+                    {option.label}
+                    {filter === option.value && <Check className="w-4 h-4" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Calendar Grid */}
+      <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+        {/* Day headers */}
+        <div className="grid grid-cols-7 border-b border-slate-800">
+          {DAYS.map((day) => (
+            <div
+              key={day}
+              className="px-4 py-3 text-sm font-medium text-slate-500 text-center"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar cells */}
+        <div className="grid grid-cols-7">
+          {calendarDays.map((day, index) => {
+            const dayPosts = day !== null ? getPostsForDay(day) : [];
+
+            return (
+              <div
+                key={index}
+                className={`min-h-[100px] p-2 border-b border-r border-slate-800 ${
+                  day === null ? "bg-slate-900/50" : "hover:bg-slate-800/50"
+                } ${index % 7 === 6 ? "border-r-0" : ""}`}
+              >
+                {day !== null && (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <div
+                        className={`text-sm font-medium ${
+                          isToday(day)
+                            ? "w-7 h-7 flex items-center justify-center bg-emerald-600 text-white rounded-full"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {day}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      {dayPosts.map((post) => (
+                        <div
+                          key={post.id}
+                          onClick={() => setSelectedPost(post)}
+                          className={`flex items-center gap-1.5 p-1 rounded transition-colors cursor-pointer ${
+                            post.status === "Posted"
+                              ? "bg-emerald-500/10 hover:bg-emerald-500/20"
+                              : "bg-blue-500/10 hover:bg-blue-500/20 border border-dashed border-blue-500/30"
+                          }`}
+                        >
+                          {post.previewUrl ? (
+                            <img
+                              src={post.previewUrl}
+                              alt=""
+                              className="w-5 h-5 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="w-5 h-5 rounded bg-slate-700 flex items-center justify-center">
+                              {post.type === "VIDEO" ? (
+                                <Video className="w-3 h-3 text-slate-400" />
+                              ) : post.type === "CAROUSEL_ALBUM" ? (
+                                <LayoutGrid className="w-3 h-3 text-slate-400" />
+                              ) : (
+                                <Image className="w-3 h-3 text-slate-400" />
+                              )}
+                            </div>
+                          )}
+                          <span className={`text-xs truncate flex-1 ${
+                            post.status === "Posted" ? "text-emerald-400" : "text-blue-400"
+                          }`}>
+                            {post.title?.slice(0, 15) || "Post"}
+                            {post.title && post.title.length > 15 ? "..." : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Post Detail Modal (simplified - no strategy) */}
+      {selectedPost && (
+        <ClientCalendarPostModal
+          post={selectedPost}
+          onClose={() => setSelectedPost(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ClientCalendarPostModal({
+  post,
+  onClose,
+}: {
+  post: CalendarPost;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-800 flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <span
+                className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                  post.status === "Posted"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-blue-500/20 text-blue-400"
+                }`}
+              >
+                {post.status}
+              </span>
+              {(post.postedAt || post.scheduledFor) && (
+                <span className="text-sm text-slate-500">
+                  {new Date(post.postedAt || post.scheduledFor!).toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </span>
+              )}
+            </div>
+            <h2 className="text-lg font-semibold text-white mt-2">
+              {post.title || "Post"}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-500 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 flex gap-5">
+          {/* Preview */}
+          <div className="flex-shrink-0">
+            {post.previewUrl ? (
+              <img
+                src={post.previewUrl}
+                alt={post.title}
+                className="w-32 h-32 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="w-32 h-32 rounded-lg bg-slate-800 flex items-center justify-center">
+                {post.type === "VIDEO" ? (
+                  <Video className="w-8 h-8 text-slate-600" />
+                ) : post.type === "CAROUSEL_ALBUM" ? (
+                  <LayoutGrid className="w-8 h-8 text-slate-600" />
+                ) : (
+                  <Image className="w-8 h-8 text-slate-600" />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Details */}
+          <div className="flex-1 min-w-0">
+            {post.caption && (
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Caption</p>
+                <p className="text-slate-300 text-sm whitespace-pre-wrap line-clamp-6">
+                  {post.caption}
+                </p>
+              </div>
+            )}
+
+            {!post.caption && (
+              <p className="text-slate-500 text-sm">No caption available.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-800 flex items-center justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

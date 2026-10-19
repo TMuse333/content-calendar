@@ -65,9 +65,14 @@ export async function GET(request: NextRequest) {
 
   // Helper for error redirects
   const errorRedirect = (msg: string) => {
-    const path = source === "onboard"
-      ? `/onboard/${accountId}?error=${encodeURIComponent(msg)}`
-      : `/settings?error=${encodeURIComponent(msg)}`;
+    let path: string;
+    if (source === "onboard") {
+      path = `/onboard/${accountId}?error=${encodeURIComponent(msg)}`;
+    } else if (source === "client-view") {
+      path = `/account/${accountId}/client-view?error=${encodeURIComponent(msg)}`;
+    } else {
+      path = `/account/${accountId}/client-view?error=${encodeURIComponent(msg)}`;
+    }
     return NextResponse.redirect(new URL(path, request.nextUrl.origin));
   };
 
@@ -182,11 +187,11 @@ export async function GET(request: NextRequest) {
         .filter(Boolean);
 
       await client.close();
+      const selectorPath = source === "onboard"
+        ? `/onboard/${accountId}?select_instagram=${encodeURIComponent(accountLinks.join(","))}`
+        : `/account/${accountId}/client-view?select_instagram=${encodeURIComponent(accountLinks.join(","))}`;
       return NextResponse.redirect(
-        new URL(
-          `/account/${accountId}/settings?select_instagram=${encodeURIComponent(accountLinks.join(","))}`,
-          request.nextUrl.origin
-        )
+        new URL(selectorPath, request.nextUrl.origin)
       );
     }
 
@@ -237,10 +242,15 @@ export async function GET(request: NextRequest) {
       console.error("Failed to auto-capture baseline:", err);
     });
 
-    // Redirect to success - back to onboarding page if source is "onboard"
-    const redirectPath = source === "onboard"
-      ? `/onboard/${accountId}?instagram=connected&username=${instagramAccount.username}`
-      : `/account/${accountId}/settings?instagram=connected&username=${instagramAccount.username}`;
+    // Redirect to success based on source
+    let redirectPath: string;
+    if (source === "onboard") {
+      redirectPath = `/onboard/${accountId}?instagram=connected&username=${instagramAccount.username}`;
+    } else if (source === "client-view") {
+      redirectPath = `/account/${accountId}/client-view?instagram=connected&username=${instagramAccount.username}`;
+    } else {
+      redirectPath = `/account/${accountId}/client-view?instagram=connected&username=${instagramAccount.username}`;
+    }
 
     const successUrl = new URL(redirectPath, request.nextUrl.origin);
 
