@@ -6,7 +6,7 @@
 
 import { Collection, ObjectId, Filter } from "mongodb";
 import clientPromise from "./clientPromise";
-import type { Post, PostClassification, PostStrategy, ContentInsights } from "../types/post";
+import type { Post, PostClassification, PostStrategy, ContentInsights, ContentFormat } from "../types/post";
 
 // Constants
 const DB_NAME = "strategy";
@@ -269,6 +269,41 @@ export async function updatePostStrategy(
   });
 
   return result.modifiedCount > 0;
+}
+
+/**
+ * Update post format and full strategy (including parsed fields)
+ */
+export async function updatePostFullStrategy(
+  accountId: string,
+  postId: string,
+  data: {
+    format?: ContentFormat;
+    strategy: PostStrategy;
+  }
+): Promise<Post | null> {
+  const collection = await getCollection();
+
+  const filter = ObjectId.isValid(postId)
+    ? { _id: new ObjectId(postId), accountId }
+    : { instagramId: postId, accountId };
+
+  const updateFields: Record<string, unknown> = {
+    strategy: data.strategy,
+    updatedAt: new Date(),
+  };
+
+  if (data.format) {
+    updateFields.format = data.format;
+  }
+
+  const result = await collection.findOneAndUpdate(
+    filter,
+    { $set: updateFields },
+    { returnDocument: "after" }
+  );
+
+  return result;
 }
 
 /**

@@ -1,12 +1,17 @@
 /**
  * Account Types for Strategy App
  *
- * The StrategyAccount is the central config for content strategy.
- * It owns campaigns, platform connections, and coordinates with
- * video-system and listing-graphics as renderers.
+ * The StrategyAccount is the central config for a client.
+ *
+ * Data ownership:
+ * - Notion OWNS: Posts, Topics, Patterns (strategy content)
+ * - MongoDB OWNS: IG metrics, insights, reports (tracking data)
+ *
+ * This app reads strategy from Notion and tracks performance in MongoDB.
  */
 
 import { ObjectId } from "mongodb";
+import type { NotionConfig } from "../notion/types";
 
 // Account status
 export type AccountStatus = "active" | "inactive" | "suspended";
@@ -77,6 +82,32 @@ export interface BrandConfig {
   logoUrl?: string;
 }
 
+// Client billing status
+export interface BillingStatus {
+  status: "unpaid" | "paid";
+  paidAt?: Date;
+}
+
+// Package limits for deliverables
+export interface PackageLimits {
+  carousels: number;
+  graphics: number;
+  videos: number;
+}
+
+// Client review portal config
+export interface ReviewPortal {
+  token?: string;
+  tokenExpiresAt?: Date;
+  tokenCreatedAt?: Date;
+  // Checklist items for "What I need from you"
+  checklist?: {
+    id: string;
+    text: string;
+    completed: boolean;
+  }[];
+}
+
 // Entropy level mix (see docs/ENTROPY_LEVELS.md)
 export interface EntropyMix {
   L1: number;  // Identity %
@@ -123,28 +154,37 @@ export interface ContentStrategy {
 // Main StrategyAccount interface
 export interface StrategyAccount {
   _id?: ObjectId;
-  id: string;                     // Unique slug (e.g., "thomas-musial")
+  id: string;                     // Unique slug (e.g., "greg-caseley")
   name: string;                   // Display name
-  handle?: string;                // Social handle (e.g., "@thomasmusial")
+  handle?: string;                // Social handle (e.g., "@gregcaseley")
   email?: string;
 
-  // Content strategy
-  campaigns: Campaign[];
+  // Notion integration - where strategy lives
+  notion?: NotionConfig;
 
-  // Entropy reduction strategy (see docs/ENTROPY_LEVELS.md)
-  contentStrategy?: ContentStrategy;
-
-  // Platform connections
+  // Platform connections (for tracking)
   platforms: PlatformConnections;
 
   // Branding
   brand?: BrandConfig;
 
+  // Client review portal
+  billing?: BillingStatus;
+  package?: PackageLimits;
+  reviewPortal?: ReviewPortal;
+
+  // Google Drive integration (for assets)
+  driveFolderId?: string;
+
   // Metadata
   status: AccountStatus;
-  isActive: boolean;              // Soft delete flag
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+
+  // DEPRECATED - use Notion Topics/Posts instead
+  campaigns?: Campaign[];
+  contentStrategy?: ContentStrategy;
 }
 
 // Request types
@@ -163,6 +203,7 @@ export interface UpdateAccountRequest {
   status?: AccountStatus;
   brand?: Partial<BrandConfig>;
   platforms?: Partial<PlatformConnections>;
+  driveFolderId?: string;
 }
 
 // Campaign request types

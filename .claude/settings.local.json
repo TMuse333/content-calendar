@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "mcp__notion__notion-query-data-sources",
+      "mcp__notion__notion-update-page",
+      "Bash(git checkout:*)",
+      "Bash(npm install:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(npm run test:*)",
+      "Bash(git add:*)",
+      "mcp__notion__notion-fetch",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

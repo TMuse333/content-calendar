@@ -227,6 +227,16 @@ export async function GET(request: NextRequest) {
 
     await client.close();
 
+    // Trigger baseline capture in background (don't await - let it run async)
+    const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+    fetch(`${baseUrl}/api/accounts/${accountId}/baseline`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: "Auto-captured on Instagram connect" }),
+    }).catch((err) => {
+      console.error("Failed to auto-capture baseline:", err);
+    });
+
     // Redirect to success - back to onboarding page if source is "onboard"
     const redirectPath = source === "onboard"
       ? `/onboard/${accountId}?instagram=connected&username=${instagramAccount.username}`

@@ -18,9 +18,24 @@ import {
   Loader2,
   Send,
   AlertCircle,
+  Download,
+  Heart,
+  MessageCircle,
+  Sparkles,
+  Target,
+  Lightbulb,
+  BookOpen,
+  Bookmark,
+  TrendingUp,
+  Eye,
+  Share2,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useAccount } from "@/contexts/AccountContext";
-import type { Post } from "@/lib/types/post";
+import type { Post, CreativeIntent, CraftNotes, StrategyHypothesis, StrategyLearning } from "@/lib/types/post";
 import type { ScheduledPost, ScheduledPostStatus } from "@/lib/types/scheduled-post";
 import { getStatusDisplay } from "@/lib/types/scheduled-post";
 
@@ -43,6 +58,7 @@ function getFirstDayOfMonth(year: number, month: number) {
 
 export default function CalendarPage() {
   const { currentAccount } = useAccount();
+  const router = useRouter();
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
@@ -52,8 +68,10 @@ export default function CalendarPage() {
   const [filter, setFilter] = useState<CalendarFilter>("all");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
+  const [selectedPublishedPost, setSelectedPublishedPost] = useState<Post | null>(null);
   const [showCreateModal, setShowCreateModal] = useState<{ day: number } | null>(null);
   const [creating, setCreating] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
@@ -95,6 +113,25 @@ export default function CalendarPage() {
       setLoading(false);
     });
   }, [fetchPosts, fetchScheduledPosts]);
+
+  // Sync posts from Instagram
+  const handleSync = async () => {
+    if (!currentAccount) return;
+    setSyncing(true);
+    try {
+      const res = await fetch(`/api/accounts/${currentAccount.id}/posts/sync`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchPosts();
+      }
+    } catch (error) {
+      console.error("Sync failed:", error);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Get posts for a specific day
   const getPostsForDay = (day: number) => {
@@ -248,6 +285,14 @@ export default function CalendarPage() {
           >
             Today
           </button>
+          <button
+            onClick={handleSync}
+            disabled={syncing || !currentAccount}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+          >
+            <Download className={`w-4 h-4 ${syncing ? "animate-pulse" : ""}`} />
+            {syncing ? "Syncing..." : "Sync"}
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -355,6 +400,7 @@ export default function CalendarPage() {
                       {dayPosts.map((post) => (
                         <div
                           key={post.instagramId || post._id?.toString()}
+                          onClick={() => setSelectedPublishedPost(post)}
                           className="flex items-center gap-1.5 p-1 rounded bg-slate-800/50 hover:bg-slate-700/50 transition-colors group cursor-pointer"
                         >
                           {post.thumbnailUrl ? (
@@ -534,6 +580,22 @@ export default function CalendarPage() {
         </div>
       )}
 
+      {/* Published Post Detail Modal */}
+      {selectedPublishedPost && (
+        <PublishedPostModal
+          post={selectedPublishedPost}
+          accountId={currentAccount?.id || ""}
+          onClose={() => setSelectedPublishedPost(null)}
+          onPostUpdate={(updatedPost) => {
+            setSelectedPublishedPost(updatedPost);
+            // Update in the posts array too
+            setPosts(posts.map(p =>
+              p.instagramId === updatedPost.instagramId ? updatedPost : p
+            ));
+          }}
+        />
+      )}
+
       {/* Create Post Modal */}
       {showCreateModal && (
         <CreatePostModal
@@ -633,6 +695,675 @@ function CreatePostModal({
             {creating && <Loader2 className="w-4 h-4 animate-spin" />}
             Schedule
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Published Post Modal with Strategy Tab
+function PublishedPostModal({
+  post,
+  accountId,
+  onClose,
+  onPostUpdate,
+}: {
+  post: Post;
+  accountId: string;
+  onClose: () => void;
+  onPostUpdate: (post: Post) => void;
+}) {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"post" | "strategy" | "analytics">("post");
+  const [rawNotes, setRawNotes] = useState(post.strategy?.rawNotes || "");
+  const [parsing, setParsing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [updatingHypothesis, setUpdatingHypothesis] = useState<string | null>(null);
+
+  const hasStrategy = Boolean(post.strategy?.intent || post.strategy?.craft);
+
+  const updateHypothesisStatus = async (hypothesisId: string, status: "confirmed" | "refuted" | "unclear" | "pending") => {
+    if (!post.strategy?.hypotheses) return;
+
+    setUpdatingHypothesis(hypothesisId);
+
+    // Update locally first for immediate feedback
+    const updatedHypotheses = post.strategy.hypotheses.map(h =>
+      h.id === hypothesisId ? { ...h, status } : h
+    );
+
+    try {
+      const res = await fetch(
+        `/api/accounts/${accountId}/posts/${post._id}/parse-strategy`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rawNotes: post.strategy.rawNotes || "",
+            updateHypotheses: updatedHypotheses,
+          }),
+        }
+      );
+
+      const data = await res.json();
+      if (data.success && data.post) {
+        onPostUpdate(data.post);
+      }
+    } catch (err) {
+      console.error("Failed to update hypothesis:", err);
+    } finally {
+      setUpdatingHypothesis(null);
+    }
+  };
+
+  const handleParseStrategy = async () => {
+    if (!rawNotes.trim()) return;
+
+    setParsing(true);
+    setError(null);
+
+    try {
+      const res = await fetch(
+        `/api/accounts/${accountId}/posts/${post._id}/parse-strategy`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rawNotes }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success && data.post) {
+        onPostUpdate(data.post);
+      } else {
+        setError(data.error || "Failed to parse strategy");
+      }
+    } catch (err) {
+      setError("Failed to parse strategy");
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-800 flex items-start justify-between flex-shrink-0">
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+                Published
+              </span>
+              <span className="text-sm text-slate-500">
+                {new Date(post.postedAt).toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              {post.mediaType === "VIDEO" && (
+                <span className="flex items-center gap-1 text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded">
+                  <Video className="w-3 h-3" /> Reel
+                </span>
+              )}
+              {post.mediaType === "CAROUSEL_ALBUM" && (
+                <span className="flex items-center gap-1 text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">
+                  <LayoutGrid className="w-3 h-3" /> Carousel
+                </span>
+              )}
+              {post.mediaType === "IMAGE" && (
+                <span className="flex items-center gap-1 text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                  <Image className="w-3 h-3" /> Image
+                </span>
+              )}
+              {post.format && (
+                <span className="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded capitalize">
+                  {post.format.replace("-", " ")}
+                </span>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-500 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-slate-800 flex-shrink-0">
+          <button
+            onClick={() => setActiveTab("post")}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === "post"
+                ? "text-white border-b-2 border-emerald-500"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            Post Info
+          </button>
+          <button
+            onClick={() => setActiveTab("strategy")}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === "strategy"
+                ? "text-white border-b-2 border-emerald-500"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            Strategy
+            {hasStrategy && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("analytics")}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === "analytics"
+                ? "text-white border-b-2 border-emerald-500"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" />
+            Analytics
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto flex-1">
+          {activeTab === "post" ? (
+            <div className="flex gap-6">
+              {/* Media */}
+              <div className="flex-shrink-0">
+                {post.thumbnailUrl ? (
+                  <img
+                    src={post.thumbnailUrl}
+                    alt=""
+                    className="w-48 h-48 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="w-48 h-48 rounded-lg bg-slate-800 flex items-center justify-center">
+                    {post.mediaType === "VIDEO" ? (
+                      <Video className="w-12 h-12 text-slate-600" />
+                    ) : post.mediaType === "CAROUSEL_ALBUM" ? (
+                      <LayoutGrid className="w-12 h-12 text-slate-600" />
+                    ) : (
+                      <Image className="w-12 h-12 text-slate-600" />
+                    )}
+                  </div>
+                )}
+
+                {/* Engagement */}
+                <div className="flex items-center gap-4 mt-3 text-sm">
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Heart className="w-4 h-4 text-pink-500" />
+                    <span>{post.metrics?.likes?.toLocaleString() || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <MessageCircle className="w-4 h-4 text-blue-400" />
+                    <span>{post.metrics?.comments?.toLocaleString() || 0}</span>
+                  </div>
+                  {post.metrics?.saves && (
+                    <div className="flex items-center gap-1.5 text-slate-400">
+                      <Bookmark className="w-4 h-4 text-amber-500" />
+                      <span>{post.metrics.saves.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Caption */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-slate-400 mb-2">Caption</h3>
+                <p className="text-white text-sm whitespace-pre-wrap leading-relaxed">
+                  {post.caption || "No caption"}
+                </p>
+              </div>
+            </div>
+          ) : activeTab === "strategy" ? (
+            <div className="space-y-6 relative">
+              {/* Parsing Overlay */}
+              {parsing && (
+                <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-xl">
+                  <div className="flex items-center gap-3 text-purple-400">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span className="text-lg font-medium">Analyzing with AI...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Raw Notes Input */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-slate-400">
+                    Your Notes
+                  </label>
+                  {post.strategy?.parsedAt && (
+                    <span className="text-xs text-slate-500">
+                      Parsed {new Date(post.strategy.parsedAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+
+                {!hasStrategy ? (
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                        <Sparkles className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">No strategy notes yet</p>
+                        <p className="text-sm text-slate-400 mt-1">
+                          What was your intent with this post? Paste your notes or describe what you were going for...
+                        </p>
+                      </div>
+                    </div>
+                    <textarea
+                      value={rawNotes}
+                      onChange={(e) => setRawNotes(e.target.value)}
+                      placeholder="e.g., Lake poem about unseen growth. Want viewers to feel hope about their own progress. Using plants as metaphor. Open ending so they imagine their own future..."
+                      rows={6}
+                      className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
+                    />
+                    {error && (
+                      <p className="text-red-400 text-sm mt-2">{error}</p>
+                    )}
+                    <button
+                      onClick={handleParseStrategy}
+                      disabled={parsing || !rawNotes.trim()}
+                      className="mt-3 flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      {parsing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                      {parsing ? "Parsing..." : "Parse with AI"}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Summary */}
+                    {post.strategy?.intent && (
+                      <div className="bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/20 rounded-xl p-4 mb-4">
+                        <p className="text-white">
+                          <span className="text-purple-400 font-medium">Goal:</span>{" "}
+                          {post.strategy.intent.desiredEffect}
+                        </p>
+                        {post.strategy.intent.emotionalTargets && post.strategy.intent.emotionalTargets.length > 0 && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-slate-400 text-sm">Evoking:</span>
+                            {post.strategy.intent.emotionalTargets.slice(0, 4).map((e, i) => (
+                              <span key={i} className="px-2 py-0.5 bg-pink-500/20 text-pink-400 rounded text-xs">
+                                {e}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Raw notes with edit/re-parse */}
+                    <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 mb-4">
+                      {!editingNotes ? (
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm text-slate-400 flex-1">
+                            {post.strategy?.rawNotes || rawNotes || "No notes"}
+                          </p>
+                          <button
+                            onClick={() => {
+                              setEditingNotes(true);
+                              setRawNotes(post.strategy?.rawNotes || "");
+                            }}
+                            className="text-xs text-purple-400 hover:text-purple-300 flex-shrink-0"
+                          >
+                            Edit & Re-parse
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <textarea
+                            value={rawNotes}
+                            onChange={(e) => setRawNotes(e.target.value)}
+                            rows={4}
+                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-purple-500 resize-none mb-2"
+                            placeholder="Your notes about this post's intent..."
+                          />
+                          {error && <p className="text-red-400 text-sm mb-2">{error}</p>}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setEditingNotes(false)}
+                              className="px-3 py-1.5 text-sm text-slate-400 hover:text-white"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={async () => {
+                                await handleParseStrategy();
+                                setEditingNotes(false);
+                              }}
+                              disabled={parsing || !rawNotes.trim()}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg"
+                            >
+                              {parsing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                              {parsing ? "Parsing..." : "Re-parse"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Structured Strategy Display */}
+                    <div className="space-y-4">
+                      {/* Intent */}
+                      {post.strategy?.intent && (
+                        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Target className="w-4 h-4 text-cyan-400" />
+                            <h4 className="text-sm font-medium text-white">Intent</h4>
+                          </div>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <span className="text-slate-500">Audience:</span>
+                              <span className="text-white ml-2">{post.strategy.intent.targetAudience}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Effect:</span>
+                              <span className="text-white ml-2">{post.strategy.intent.desiredEffect}</span>
+                            </div>
+                            {post.strategy.intent.emotionalTargets && post.strategy.intent.emotionalTargets.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                <span className="text-slate-500">Emotions:</span>
+                                {post.strategy.intent.emotionalTargets.map((e, i) => (
+                                  <span key={i} className="px-2 py-0.5 bg-pink-500/20 text-pink-400 rounded text-xs">
+                                    {e}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {post.strategy.intent.psychologicalLevers && post.strategy.intent.psychologicalLevers.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                <span className="text-slate-500">Levers:</span>
+                                {post.strategy.intent.psychologicalLevers.map((l, i) => (
+                                  <span key={i} className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-xs">
+                                    {l}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Craft */}
+                      {post.strategy?.craft && (
+                        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Lightbulb className="w-4 h-4 text-amber-400" />
+                            <h4 className="text-sm font-medium text-white">Craft</h4>
+                          </div>
+                          <div className="space-y-3 text-sm">
+                            {post.strategy.craft.techniques && post.strategy.craft.techniques.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                <span className="text-slate-500">Techniques:</span>
+                                {post.strategy.craft.techniques.map((t, i) => (
+                                  <span key={i} className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-xs">
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {post.strategy.craft.structure && (
+                              <div>
+                                <span className="text-slate-500">Structure:</span>
+                                <span className="text-white ml-2">{post.strategy.craft.structure}</span>
+                              </div>
+                            )}
+                            {post.strategy.craft.keyDecisions && (
+                              <div>
+                                <span className="text-slate-500">Key Decisions:</span>
+                                <p className="text-white mt-1">{post.strategy.craft.keyDecisions}</p>
+                              </div>
+                            )}
+                            {post.strategy.craft.mediaStrategy && (
+                              <div>
+                                <span className="text-slate-500">Media:</span>
+                                <span className="text-white ml-2">{post.strategy.craft.mediaStrategy}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hypotheses */}
+                      {post.strategy?.hypotheses && post.strategy.hypotheses.length > 0 && (
+                        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Target className="w-4 h-4 text-blue-400" />
+                            <h4 className="text-sm font-medium text-white">Hypotheses</h4>
+                          </div>
+                          <div className="space-y-3">
+                            {post.strategy.hypotheses.map((h, i) => (
+                              <div key={h.id || i} className="flex items-start gap-3 text-sm">
+                                <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                                  h.status === "confirmed" ? "bg-emerald-500" :
+                                  h.status === "refuted" ? "bg-red-500" :
+                                  h.status === "unclear" ? "bg-amber-500" :
+                                  "bg-slate-500"
+                                }`} />
+                                <div>
+                                  <p className="text-white">{h.prediction}</p>
+                                  {h.rationale && (
+                                    <p className="text-slate-400 text-xs mt-1">{h.rationale}</p>
+                                  )}
+                                  {h.metric && (
+                                    <p className="text-slate-500 text-xs mt-1">Metric: {h.metric}</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Learnings */}
+                      {post.strategy?.learnings && post.strategy.learnings.length > 0 && (
+                        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <BookOpen className="w-4 h-4 text-emerald-400" />
+                            <h4 className="text-sm font-medium text-white">Learnings</h4>
+                          </div>
+                          <div className="space-y-3">
+                            {post.strategy.learnings.map((l, i) => (
+                              <div key={l.id || i} className="text-sm">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded text-xs capitalize">
+                                    {l.category}
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded text-xs ${
+                                    l.confidence === "established" ? "bg-emerald-500/20 text-emerald-400" :
+                                    l.confidence === "supported" ? "bg-blue-500/20 text-blue-400" :
+                                    "bg-slate-600 text-slate-400"
+                                  }`}>
+                                    {l.confidence}
+                                  </span>
+                                </div>
+                                <p className="text-white">{l.insight}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : activeTab === "analytics" ? (
+            /* Analytics Tab */
+            <div className="space-y-6">
+              {/* Engagement Metrics */}
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                <h4 className="text-sm font-medium text-white mb-4">Engagement</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-1">
+                      <Heart className="w-4 h-4 text-pink-500" />
+                    </div>
+                    <div className="text-2xl font-bold text-white">
+                      {post.metrics?.likes?.toLocaleString() || 0}
+                    </div>
+                    <div className="text-xs text-slate-500">Likes</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-1">
+                      <MessageCircle className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div className="text-2xl font-bold text-white">
+                      {post.metrics?.comments?.toLocaleString() || 0}
+                    </div>
+                    <div className="text-xs text-slate-500">Comments</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-1">
+                      <Bookmark className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div className="text-2xl font-bold text-white">
+                      {post.metrics?.saves?.toLocaleString() || 0}
+                    </div>
+                    <div className="text-xs text-slate-500">Saves</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-1">
+                      <Eye className="w-4 h-4 text-cyan-400" />
+                    </div>
+                    <div className="text-2xl font-bold text-white">
+                      {post.metrics?.reach?.toLocaleString() || 0}
+                    </div>
+                    <div className="text-xs text-slate-500">Reach</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hypothesis Validation */}
+              {post.strategy?.hypotheses && post.strategy.hypotheses.length > 0 && (
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                  <h4 className="text-sm font-medium text-white mb-4">Hypothesis Tracking</h4>
+                  <div className="space-y-3">
+                    {post.strategy.hypotheses.map((h, i) => (
+                      <div key={h.id || i} className="bg-slate-900/50 rounded-lg p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <p className="text-sm text-white">{h.prediction}</p>
+                            {h.metric && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                Metric: {h.metric}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {updatingHypothesis === h.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => updateHypothesisStatus(h.id, h.status === "confirmed" ? "pending" : "confirmed")}
+                                  className={`p-1.5 rounded transition-colors ${
+                                    h.status === "confirmed"
+                                      ? "bg-emerald-500/20 text-emerald-400"
+                                      : "hover:bg-emerald-500/10 text-slate-500 hover:text-emerald-400"
+                                  }`}
+                                  title="Confirmed"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => updateHypothesisStatus(h.id, h.status === "refuted" ? "pending" : "refuted")}
+                                  className={`p-1.5 rounded transition-colors ${
+                                    h.status === "refuted"
+                                      ? "bg-red-500/20 text-red-400"
+                                      : "hover:bg-red-500/10 text-slate-500 hover:text-red-400"
+                                  }`}
+                                  title="Refuted"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => updateHypothesisStatus(h.id, h.status === "unclear" ? "pending" : "unclear")}
+                                  className={`p-1.5 rounded transition-colors ${
+                                    h.status === "unclear"
+                                      ? "bg-amber-500/20 text-amber-400"
+                                      : "hover:bg-amber-500/10 text-slate-500 hover:text-amber-400"
+                                  }`}
+                                  title="Unclear"
+                                >
+                                  <HelpCircle className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Link to Strategy */}
+              {!hasStrategy && (
+                <div className="bg-slate-800/30 border border-dashed border-slate-700 rounded-xl p-6 text-center">
+                  <Sparkles className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                  <p className="text-slate-400">Add strategy notes to track hypotheses</p>
+                  <button
+                    onClick={() => setActiveTab("strategy")}
+                    className="mt-3 text-sm text-purple-400 hover:text-purple-300"
+                  >
+                    Go to Strategy tab →
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-800 flex items-center justify-between gap-2 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            Close
+          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                router.push(`/account/${accountId}/library/${post._id}`);
+              }}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              View in Library
+            </button>
+            {post.permalink && (
+              <a
+                href={post.permalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Instagram
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>

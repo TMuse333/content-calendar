@@ -41,6 +41,7 @@ export default function OnboardPage() {
   const justConnected = searchParams.get("instagram") === "connected";
   const connectedUsername = searchParams.get("username");
   const connectionError = searchParams.get("error");
+  const isDev = process.env.NODE_ENV === "development";
 
   useEffect(() => {
     fetchData();
@@ -60,8 +61,8 @@ export default function OnboardPage() {
         setError("Account not found");
         return;
       }
-      const accountData = await accountRes.json();
-      setAccount(accountData);
+      const data = await accountRes.json();
+      setAccount(data.account || data);
     } catch {
       setError("Failed to load data");
     } finally {
@@ -86,6 +87,31 @@ export default function OnboardPage() {
   const handleSendFeedback = async () => {
     // TODO: Save feedback to DB
     setFeedbackSent(true);
+  };
+
+  // Dev-only: Skip Instagram connection with mock data
+  const handleSkipConnect = async () => {
+    try {
+      const res = await fetch(`/api/accounts/${accountId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platforms: {
+            instagram: {
+              connected: true,
+              userId: "mock-user-id",
+              username: "demo_account",
+              connectedAt: new Date().toISOString(),
+            },
+          },
+        }),
+      });
+      if (res.ok) {
+        window.location.href = `/onboard/${accountId}?instagram=connected&username=demo_account`;
+      }
+    } catch (err) {
+      console.error("Skip failed:", err);
+    }
   };
 
   const isConnected = account?.platforms?.instagram?.connected;
@@ -216,36 +242,82 @@ export default function OnboardPage() {
                 <div className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">
                   <Link2 className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-white font-medium">1. Have a Facebook Page</p>
-                    <p className="text-slate-400">
-                      Go to Facebook → Menu → Pages → Create New Page (2 min)
+                    <p className="text-white font-medium">1. Create a Facebook Page</p>
+                    <p className="text-slate-400 mb-2">
+                      This is different from your personal Facebook profile. A Page represents your business.
                     </p>
+                    <a
+                      href="https://www.facebook.com/pages/create"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 underline"
+                    >
+                      Create a Facebook Page →
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">
                   <Camera className="w-5 h-5 text-pink-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-white font-medium">2. Business/Creator Account</p>
-                    <p className="text-slate-400">Instagram → Settings → Account → Switch to Professional</p>
+                    <p className="text-white font-medium">2. Switch to Professional Account</p>
+                    <p className="text-slate-400 mb-2">
+                      In Instagram app: Profile → Menu (☰) → Settings → Account → Switch to Professional Account → Choose &quot;Business&quot;
+                    </p>
+                    <a
+                      href="https://help.instagram.com/502981923235522"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-pink-400 hover:text-pink-300 underline"
+                    >
+                      Instagram guide →
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">
                   <Zap className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-white font-medium">3. Link to Facebook Page</p>
-                    <p className="text-slate-400">Instagram → Settings → Sharing to Other Apps → Facebook</p>
+                    <p className="text-white font-medium">3. Connect Instagram to Facebook Page</p>
+                    <p className="text-slate-400 mb-2">
+                      In Instagram app: Profile → Edit Profile → Page → Connect or Create. Select the Facebook Page from step 1.
+                    </p>
+                    <a
+                      href="https://help.instagram.com/570895513091465"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-400 hover:text-purple-300 underline"
+                    >
+                      Connection guide →
+                    </a>
                   </div>
                 </div>
               </div>
 
-              <a
-                href={`/api/auth/instagram/connect?accountId=${accountId}&source=onboard`}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-medium rounded-lg transition-all"
-              >
-                <Camera className="w-5 h-5" />
-                Connect Instagram
-                <ArrowRight className="w-4 h-4" />
-              </a>
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-sm">
+                <p className="text-amber-400 font-medium mb-1">Already have these set up?</p>
+                <p className="text-slate-400">
+                  Great! Just click the button below. You&apos;ll log into Facebook and grant access to your Instagram Business account.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <a
+                  href={`/api/auth/instagram/connect?accountId=${accountId}&source=onboard`}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-medium rounded-lg transition-all"
+                >
+                  <Camera className="w-5 h-5" />
+                  Connect Instagram
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+
+                {isDev && (
+                  <button
+                    onClick={handleSkipConnect}
+                    className="px-4 py-3 text-slate-400 hover:text-white text-sm border border-slate-700 hover:border-slate-600 rounded-lg transition-colors"
+                  >
+                    Skip (dev)
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}

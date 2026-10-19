@@ -10,8 +10,13 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
 
-  // Don't render shell for auth or onboard routes (client-facing)
-  if (pathname.startsWith("/auth") || pathname.startsWith("/onboard")) {
+  // Don't render shell for auth, onboard, client-view, or review routes (client-facing)
+  if (
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/onboard") ||
+    pathname.includes("/client-view") ||
+    pathname.startsWith("/review")
+  ) {
     return <>{children}</>;
   }
 

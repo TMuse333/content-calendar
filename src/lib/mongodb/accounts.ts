@@ -46,6 +46,7 @@ export async function ensureAccountIndexes(): Promise<void> {
     collection.createIndex({ status: 1 }),
     collection.createIndex({ isActive: 1 }),
     collection.createIndex({ createdAt: -1 }),
+    collection.createIndex({ "reviewPortal.token": 1 }, { sparse: true }),
   ]);
 
   indexesEnsured = true;
@@ -189,6 +190,7 @@ export async function updateAccount(
   if (updates.handle !== undefined) updateDoc.handle = updates.handle;
   if (updates.email !== undefined) updateDoc.email = updates.email;
   if (updates.status !== undefined) updateDoc.status = updates.status;
+  if (updates.driveFolderId !== undefined) updateDoc.driveFolderId = updates.driveFolderId;
 
   // Nested configs - merge with existing
   if (updates.brand) {
@@ -367,6 +369,132 @@ export async function removeInfoPoint(
     {
       $pull: { "campaigns.$.informationPoints": { id: infoPointId } },
       $set: { "campaigns.$.updatedAt": new Date(), updatedAt: new Date() },
+    }
+  );
+
+  return result.modifiedCount > 0;
+}
+
+// ============================================================================
+// CLIENT PORTAL OPERATIONS
+// ============================================================================
+
+/**
+ * Generate a review token for client portal
+ */
+export async function generateReviewToken(
+  accountId: string,
+  expiresInDays: number = 30
+): Promise<string | null> {
+  const collection = await getCollection();
+
+  // Generate a secure random token
+  const token = Array.from({ length: 32 }, () =>
+    Math.random().toString(36).charAt(2)
+  ).join("");
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + expiresInDays * 24 * 60 * 60 * 1000);
+
+  const result = await collection.updateOne(
+    { id: accountId, isActive: { $ne: false } },
+    {
+      $set: {
+        "reviewPortal.token": token,
+        "reviewPortal.tokenCreatedAt": now,
+        "reviewPortal.tokenExpiresAt": expiresAt,
+        updatedAt: now,
+      },
+    }
+  );
+
+  if (result.modifiedCount === 0) return null;
+  return token;
+}
+
+/**
+ * Get account by review token
+ */
+export async function getAccountByReviewToken(
+  token: string
+): Promise<StrategyAccount | null> {
+  await ensureAccountIndexes();
+  const collection = await getCollection();
+
+  return collection.findOne({
+    "reviewPortal.token": token,
+    "reviewPortal.tokenExpiresAt": { $gt: new Date() },
+    isActive: { $ne: false },
+  });
+}
+
+/**
+ * Update billing status
+ */
+export async function updateBillingStatus(
+  accountId: string,
+  status: "unpaid" | "paid"
+): Promise<boolean> {
+  const collection = await getCollection();
+
+  const updateDoc: Record<string, unknown> = {
+    "billing.status": status,
+    updatedAt: new Date(),
+  };
+
+  if (status === "paid") {
+    updateDoc["billing.paidAt"] = new Date();
+  }
+
+  const result = await collection.updateOne(
+    { id: accountId, isActive: { $ne: false } },
+    { $set: updateDoc }
+  );
+
+  return result.modifiedCount > 0;
+}
+
+/**
+ * Update package limits
+ */
+export async function updatePackageLimits(
+  accountId: string,
+  limits: { carousels?: number; graphics?: number; videos?: number }
+): Promise<boolean> {
+  const collection = await getCollection();
+
+  const updateDoc: Record<string, unknown> = {
+    updatedAt: new Date(),
+  };
+
+  if (limits.carousels !== undefined) updateDoc["package.carousels"] = limits.carousels;
+  if (limits.graphics !== undefined) updateDoc["package.graphics"] = limits.graphics;
+  if (limits.videos !== undefined) updateDoc["package.videos"] = limits.videos;
+
+  const result = await collection.updateOne(
+    { id: accountId, isActive: { $ne: false } },
+    { $set: updateDoc }
+  );
+
+  return result.modifiedCount > 0;
+}
+
+/**
+ * Update review portal checklist
+ */
+export async function updateReviewChecklist(
+  accountId: string,
+  checklist: { id: string; text: string; completed: boolean }[]
+): Promise<boolean> {
+  const collection = await getCollection();
+
+  const result = await collection.updateOne(
+    { id: accountId, isActive: { $ne: false } },
+    {
+      $set: {
+        "reviewPortal.checklist": checklist,
+        updatedAt: new Date(),
+      },
     }
   );
 

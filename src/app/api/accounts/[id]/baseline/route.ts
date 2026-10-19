@@ -115,7 +115,7 @@ export async function POST(
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { notes, clientEstimate } = body;
+    const { notes, clientEstimate, dryRun } = body;
 
     const mongoUri = process.env.MONGODB_URI;
     if (!mongoUri) {
@@ -156,6 +156,16 @@ export async function POST(
       clientEstimate: clientEstimate || undefined,
       notes: notes || `Baseline captured on ${new Date().toLocaleDateString()}`,
     };
+
+    // If dryRun, just return the data without saving
+    if (dryRun) {
+      await client.close();
+      return NextResponse.json({
+        success: true,
+        baseline,
+        message: "Dry run - metrics fetched but not saved",
+      });
+    }
 
     await db.collection("baselines").insertOne(baseline);
     await client.close();

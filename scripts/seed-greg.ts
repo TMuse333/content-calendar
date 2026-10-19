@@ -1,14 +1,28 @@
 /**
- * Seed Greg Caseley's account and announcement package
+ * Seed Greg Caseley's account with Notion integration
  *
  * Run with: npx tsx scripts/seed-greg.ts
+ *
+ * This creates/updates Greg's account with:
+ * - Basic account info
+ * - Notion config pointing to his Content Hub databases
+ *
+ * Greg's Notion data source IDs (from his Content Hub):
+ * - Posts: collection://09d0f481-0d99-4e07-a65d-685ac13c4304
+ * - Topics: collection://7204330d-841d-45ea-bda0-2d7b1cc491f8
  */
 
 import { MongoClient } from "mongodb";
 import * as dotenv from "dotenv";
-import { randomUUID } from "crypto";
+import type { StrategyAccount } from "../src/lib/types/account";
 
 dotenv.config({ path: ".env.local" });
+
+// Greg's Notion data source IDs from his Content Hub
+const GREG_NOTION_CONFIG = {
+  postsDataSourceId: "collection://09d0f481-0d99-4e07-a65d-685ac13c4304",
+  topicsDataSourceId: "collection://7204330d-841d-45ea-bda0-2d7b1cc491f8",
+};
 
 async function main() {
   const uri = process.env.MONGODB_URI;
@@ -20,64 +34,57 @@ async function main() {
   const client = await MongoClient.connect(uri);
   const db = client.db("strategy");
 
-  console.log("Seeding Greg Caseley...\n");
+  console.log("Seeding Greg Caseley's account...\n");
 
-  // 1. Create or update Greg's account
-  const accountData = {
+  // Build the account document
+  const accountData: Omit<StrategyAccount, "_id"> = {
     id: "greg-caseley",
     name: "Greg Caseley",
-    type: "client",
-    brokerage: "RE/MAX Harbourside",
-    location: "PEI",
-    createdAt: new Date("2026-08-01"),
-    updatedAt: new Date(),
-  };
+    handle: "@gregcaseley",
+    email: "greg@example.com",
 
-  const existingAccount = await db.collection("accounts").findOne({ id: "greg-caseley" });
-  if (existingAccount) {
-    await db.collection("accounts").updateOne(
-      { id: "greg-caseley" },
-      { $set: { ...accountData, updatedAt: new Date() } }
-    );
-    console.log("✓ Updated account: greg-caseley");
-  } else {
-    await db.collection("accounts").insertOne(accountData);
-    console.log("✓ Created account: greg-caseley");
-  }
+    // Notion integration - where strategy lives
+    notion: GREG_NOTION_CONFIG,
 
-  // 2. Create announcement package
-  const packageData = {
-    id: randomUUID(),
-    accountId: "greg-caseley",
-    name: "Announcement Package #1",
-    type: "announcements",
+    // Platform connections (to be set up via Instagram OAuth)
+    platforms: {},
+
+    // Branding
+    brand: {
+      primaryColor: "#1a365d",
+      secondaryColor: "#2d3748",
+    },
+
+    // Status
     status: "active",
-    allocation: 16,
-    used: 14,
-    price: 540,
+    isActive: true,
     createdAt: new Date("2026-08-01"),
     updatedAt: new Date(),
   };
 
-  // Check if package already exists
-  const existingPackage = await db.collection("graphic_packages").findOne({
-    accountId: "greg-caseley",
-    name: "Announcement Package #1",
-  });
+  // Upsert the account
+  const result = await db.collection("accounts").updateOne(
+    { id: "greg-caseley" },
+    { $set: accountData },
+    { upsert: true }
+  );
 
-  if (existingPackage) {
-    console.log("✓ Package already exists, skipping");
+  if (result.upsertedCount > 0) {
+    console.log("✓ Created account: greg-caseley");
   } else {
-    await db.collection("graphic_packages").insertOne(packageData);
-    console.log("✓ Created package: Announcement Package #1");
-    console.log(`  - Allocation: ${packageData.allocation}`);
-    console.log(`  - Used: ${packageData.used}`);
-    console.log(`  - Remaining: ${packageData.allocation - packageData.used}`);
-    console.log(`  - Price: $${packageData.price}`);
+    console.log("✓ Updated account: greg-caseley");
   }
+
+  // Display config
+  console.log("\nNotion Config:");
+  console.log(`  Posts:  ${GREG_NOTION_CONFIG.postsDataSourceId}`);
+  console.log(`  Topics: ${GREG_NOTION_CONFIG.topicsDataSourceId}`);
 
   console.log("\n✓ Done! Greg's account is ready.");
-  console.log("\nView at: http://localhost:3000/account/greg-caseley/graphics");
+  console.log("\n📱 Onboard link (send to Greg):");
+  console.log("   http://localhost:3000/onboard/greg-caseley");
+  console.log("\n👤 Admin view:");
+  console.log("   http://localhost:3000/account/greg-caseley");
 
   await client.close();
 }
