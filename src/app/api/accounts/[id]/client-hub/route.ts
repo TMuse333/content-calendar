@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountById } from "@/lib/mongodb/accounts";
 import { getTopics, getPosts } from "@/lib/notion";
-import type { NotionConfig } from "@/lib/notion/types";
+import type { NotionConfig, NotionPost, Topic } from "@/lib/notion/types";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     };
 
     // 3. Fetch topics and posts
-    const [topics, allPosts] = await Promise.all([
+    const [topics, allPosts]: [Topic[], NotionPost[]] = await Promise.all([
       notionConfig.topicsDataSourceId ? getTopics(notionConfig) : [],
       getPosts(notionConfig),
     ]);
