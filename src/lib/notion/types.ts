@@ -53,10 +53,10 @@ export type PostType =
 export type PostStatus =
   | "Idea"
   | "Drafting"
-  | "Ready for Review"
+  | "Ready for review"
   | "Approved"
   | "Scheduled"
-  | "Published"
+  | "Posted"
   | "Archived";
 
 // =============================================================================
@@ -66,6 +66,32 @@ export type TopicStatus =
   | "Idea"
   | "Active"
   | "Covered";
+
+// =============================================================================
+// BRANCH STATUS (niche-down loop from Playbook section 11)
+// =============================================================================
+export type BranchStatus =
+  | "Testing"    // New branch being explored
+  | "Winner"     // Performing well, gets more posts
+  | "Paused"     // Not active but not dropped
+  | "Dropped";   // Not worth pursuing
+
+// =============================================================================
+// ROUND (month of the niche-down cycle)
+// =============================================================================
+export type Round =
+  | "Month 1"    // Explore: 2-3 branches, 2-3 posts each
+  | "Month 2"    // Exploit: winners get more, drop flops
+  | "Month 3"    // Refine: split winners into narrower sub-questions
+  | "Month 4+";  // Ongoing refinement
+
+// =============================================================================
+// REPORT STATUS (workflow states for monthly reports)
+// =============================================================================
+export type ReportStatus =
+  | "Due"
+  | "Drafting"
+  | "Sent";
 
 // =============================================================================
 // INFORMATION PATTERN (reusable belief-shift templates)
