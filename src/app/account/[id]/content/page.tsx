@@ -340,7 +340,7 @@ function DealCard({ deal }: { deal: DealWithProgress }) {
       </div>
 
       {progress && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <ProgressBar
             label="Carousels"
             done={progress.carousels.done}
