@@ -8,7 +8,11 @@
  * 4. Stores credentials in the account document
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import { captureBaseline, type BaselineDb } from "@/lib/baseline/capture";
+
+// Leave room for the post-redirect baseline capture.
+export const maxDuration = 60;
 import { MongoClient } from "mongodb";
 
 interface FacebookTokenResponse {
@@ -232,14 +236,26 @@ export async function GET(request: NextRequest) {
 
     await client.close();
 
-    // Trigger baseline capture in background (don't await - let it run async)
-    const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin;
-    fetch(`${baseUrl}/api/accounts/${accountId}/baseline`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notes: "Auto-captured on Instagram connect" }),
-    }).catch((err) => {
-      console.error("Failed to auto-capture baseline:", err);
+    // Capture the baseline after the redirect is sent. `after` keeps the
+    // function alive until this finishes (a bare un-awaited fetch was often
+    // frozen by Vercel before it ran, so no baseline was ever saved).
+    after(async () => {
+      const baselineClient = await MongoClient.connect(mongoUri);
+      try {
+        const result = await captureBaseline(
+          baselineClient.db("strategy") as unknown as BaselineDb,
+          { accountId, source: "auto-connect", notes: "Auto-captured on Instagram connect" }
+        );
+        if (result.status === "failed") {
+          console.error(`[baseline] auto-capture failed for ${accountId}: ${result.error}`);
+        } else {
+          console.log(`[baseline] auto-capture ${result.status} for ${accountId}`);
+        }
+      } catch (err) {
+        console.error(`[baseline] auto-capture crashed for ${accountId}:`, err);
+      } finally {
+        await baselineClient.close();
+      }
     });
 
     // Redirect to success based on source
