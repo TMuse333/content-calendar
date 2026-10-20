@@ -10,8 +10,9 @@
  *    used to be saved as all zeros, which made later reports show fake growth.
  *  - Every attempt records its outcome on the account (account.baselineStatus)
  *    so the admin can see whether a baseline exists and why it failed.
- *  - Auto-capture is idempotent: if the account already has a baseline,
- *    reconnecting Instagram does not create a second one.
+ *  - Auto-capture is idempotent: if the account already has a baseline with
+ *    Instagram data, reconnecting does not create a second one. Empty
+ *    baselines (saved by the old bug) don't count.
  */
 
 import type { Baseline } from "@/lib/types/results";
@@ -160,8 +161,10 @@ export async function captureBaseline(db: BaselineDb, opts: CaptureOptions): Pro
   if (!account) return { status: "failed", error: "Account not found" };
 
   if (opts.source === "auto-connect" && !opts.dryRun) {
-    const existing = await baselines.findOne({ accountId: opts.accountId });
-    if (existing) {
+    // Only a baseline that actually has Instagram data counts. Empty records
+    // saved by the old bug must not block a proper capture.
+    const existing = await baselines.findOne({ accountId: opts.accountId, instagram: { $ne: null } });
+    if (existing && existing.instagram) {
       return {
         status: "skipped",
         reason: "Account already has a baseline",

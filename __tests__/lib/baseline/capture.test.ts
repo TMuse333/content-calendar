@@ -134,10 +134,20 @@ describe("captureBaseline", () => {
   });
 
   it("auto-connect is idempotent: skips when a baseline already exists", async () => {
-    const { db, inserted } = fakeDb({ account: connectedAccount, existingBaseline: { id: "baseline_old" } });
+    const { db, inserted } = fakeDb({
+      account: connectedAccount,
+      existingBaseline: { id: "baseline_old", instagram: { reach: 1507 } },
+    });
     const r = await captureBaseline(db, { accountId: "greg-caseley", source: "auto-connect", fetchImpl: fetchOk, now });
     expect(r).toEqual({ status: "skipped", reason: "Account already has a baseline", existingBaselineId: "baseline_old" });
     expect(inserted).toHaveLength(0);
+  });
+
+  it("auto-connect ignores an EMPTY old baseline (instagram: null) and captures a real one", async () => {
+    const { db, inserted } = fakeDb({ account: connectedAccount, existingBaseline: { id: "baseline_empty", instagram: null } });
+    const r = await captureBaseline(db, { accountId: "greg-caseley", source: "auto-connect", fetchImpl: fetchOk, now });
+    expect(r.status).toBe("captured");
+    expect(inserted).toHaveLength(1);
   });
 
   it("manual capture still works when a baseline already exists", async () => {
