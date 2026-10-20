@@ -12,6 +12,7 @@ import {
   ensureAccountIndexes,
 } from "@/lib/mongodb/accounts";
 import type { CreateAccountRequest } from "@/lib/types/account";
+import { toPublicAccount, toPublicAccounts } from "@/lib/security/public-account";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      accounts,
+      accounts: toPublicAccounts(accounts),
       count: accounts.length,
     });
   } catch (error) {
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      account,
+      account: toPublicAccount(account),
     });
   } catch (error) {
     console.error("[api:accounts/POST]", error);
