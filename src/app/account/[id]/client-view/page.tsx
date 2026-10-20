@@ -182,10 +182,66 @@ export default function ClientHubPage() {
     );
   }
 
+  // Show Instagram connection screen if not connected
+  if (!data.instagram?.connected) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md text-center">
+          {/* Instagram gradient icon */}
+          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center">
+            <InstagramIcon className="w-10 h-10 text-white" />
+          </div>
+
+          <h1 className="text-2xl font-bold text-white mb-3">
+            Connect Instagram
+          </h1>
+
+          <p className="text-slate-400 mb-6 leading-relaxed">
+            Connect your Instagram account to track what content actually works —
+            so we can double down on winners instead of guessing.
+          </p>
+
+          <div className="space-y-3 text-left mb-8">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+              </div>
+              <p className="text-sm text-slate-300">See which posts get the most engagement</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Target className="w-3.5 h-3.5 text-emerald-400" />
+              </div>
+              <p className="text-sm text-slate-300">Track which topics resonate with your audience</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+              </div>
+              <p className="text-sm text-slate-300">View your content calendar with real results</p>
+            </div>
+          </div>
+
+          <a
+            href={`/api/auth/instagram/connect?accountId=${accountId}&source=client-view`}
+            className="inline-flex items-center justify-center gap-3 w-full py-4 px-6 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 hover:from-purple-500 hover:via-pink-400 hover:to-orange-300 text-white font-semibold rounded-xl transition-all shadow-lg shadow-pink-500/25"
+          >
+            <InstagramIcon className="w-5 h-5" />
+            Connect Instagram
+          </a>
+
+          <p className="text-xs text-slate-500 mt-4">
+            Takes 30 seconds · We only read public metrics
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
+    <div className="min-h-screen bg-slate-950 flex flex-col md:flex-row">
+      {/* Sidebar - hidden on mobile */}
+      <aside className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col">
         {/* Account Header */}
         <div className="p-5 border-b border-slate-800">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center mb-3">
@@ -292,8 +348,31 @@ export default function ClientHubPage() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto p-8">
+      <main className="flex-1 overflow-auto pb-20 md:pb-0">
+        {/* Mobile Header */}
+        <div className="md:hidden bg-slate-900 border-b border-slate-800 px-4 py-4 sticky top-0 z-30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                <span className="text-white font-bold text-sm">
+                  {data.account.name.split(" ").map((n) => n[0]).join("")}
+                </span>
+              </div>
+              <div>
+                <h1 className="text-white font-semibold">{data.account.name}</h1>
+                {data.instagram?.username && (
+                  <p className="text-xs text-slate-500">@{data.instagram.username}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 text-emerald-400">
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="text-xs">Connected</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto p-4 md:p-8">
           {activeTab === "topics" && (
             <TopicsTab
               topics={data.topics}
@@ -318,6 +397,40 @@ export default function ClientHubPage() {
           {activeTab === "results" && <ResultsTab data={data} />}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 px-2 py-2 z-40">
+        <div className="flex justify-around">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            const count =
+              tab.id === "review"
+                ? data.summary.postsNeedingReview
+                : 0;
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors relative ${
+                  isActive
+                    ? "text-emerald-400"
+                    : "text-slate-500"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs">{tab.label}</span>
+                {count > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
