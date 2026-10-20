@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountById, updateAccount } from "@/lib/mongodb/accounts";
+import { toPublicAccount } from "@/lib/security/public-account";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ success: true, account });
+    return NextResponse.json({ success: true, account: toPublicAccount(account) });
   } catch (error) {
     console.error("[api:accounts/[id]/GET]", error);
     return NextResponse.json(
@@ -58,7 +59,7 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json({ success: true, account });
+    return NextResponse.json({ success: true, account: toPublicAccount(account) });
   } catch (error) {
     console.error("[api:accounts/[id]/PATCH]", error);
     return NextResponse.json(
