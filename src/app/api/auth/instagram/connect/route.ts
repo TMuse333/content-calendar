@@ -40,13 +40,16 @@ export async function GET(request: NextRequest) {
   // Store accountId, optional username, and source in state param to retrieve after callback
   const state = Buffer.from(JSON.stringify({ accountId, targetUsername, source })).toString("base64");
 
-  // Facebook OAuth URL
+  // Facebook OAuth URL with Business Login extras for streamlined IG onboarding
   const authUrl = new URL("https://www.facebook.com/v21.0/dialog/oauth");
   authUrl.searchParams.set("client_id", appId);
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("scope", scopes);
   authUrl.searchParams.set("state", state);
   authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("display", "page");
+  // Enable streamlined Instagram Business onboarding flow
+  authUrl.searchParams.set("extras", JSON.stringify({ setup: { channel: "IG_API_ONBOARDING" } }));
 
   return NextResponse.redirect(authUrl.toString());
 }
