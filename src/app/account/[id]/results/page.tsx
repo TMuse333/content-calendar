@@ -585,7 +585,7 @@ export default function ResultsPage() {
   };
 
   return (
-    <div className="p-6 max-w-6xl">
+    <div className="p-4 md:p-6 max-w-6xl">
       {/* Tab Bar */}
       <div className="flex items-center gap-1 mb-6 border-b border-slate-800">
         <button

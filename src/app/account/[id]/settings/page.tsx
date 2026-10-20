@@ -191,7 +191,7 @@ function SettingsContent() {
   }
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="p-4 md:p-6 max-w-3xl">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <Settings className="w-7 h-7 text-slate-400" />
