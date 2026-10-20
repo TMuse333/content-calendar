@@ -5,13 +5,15 @@
  *
  * Updates post status in Notion:
  * - "approve" → status becomes "Approved"
- * - "request-changes" → status stays "Ready for review" (could add comment)
+ * - "request-changes" → comment saved to the account's Feedback database,
+ *   status becomes "Drafting"
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountByReviewToken } from "@/lib/mongodb/accounts";
-import { getPostById, updatePostStatus } from "@/lib/notion";
-import type { NotionConfig, PostStatus } from "@/lib/notion/types";
+import { getPostById, updatePostStatus, createPostFeedback } from "@/lib/notion";
+import type { NotionConfig } from "@/lib/notion/types";
+import { performReviewAction } from "@/lib/review/action";
 
 export const dynamic = "force-dynamic";
 
@@ -44,72 +46,33 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const notionConfig: NotionConfig = {
       postsDataSourceId: account.notion.postsDataSourceId,
       topicsDataSourceId: account.notion.topicsDataSourceId || "",
+      feedbackDataSourceId: account.notion.feedbackDataSourceId,
     };
 
-    // 3. Get the post
-    const post = await getPostById(notionConfig, postId);
-    if (!post) {
-      return NextResponse.json(
-        { error: "Post not found" },
-        { status: 404 }
-      );
-    }
-
-    // 4. Check if post is reviewable
-    if (post.status !== "Ready for review") {
-      return NextResponse.json(
-        { error: "This post is not available for review" },
-        { status: 400 }
-      );
-    }
-
-    // 5. Validate action
+    // 3. Approve / request changes (validation, idempotency, feedback write)
     const { action, comment } = body;
+    const result = await performReviewAction(
+      { getPostById, updatePostStatus, createPostFeedback },
+      notionConfig,
+      postId,
+      action,
+      comment
+    );
 
-    if (!action || !["approve", "request-changes"].includes(action)) {
-      return NextResponse.json(
-        { error: "Invalid action. Must be 'approve' or 'request-changes'" },
-        { status: 400 }
-      );
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
-    // 6. Determine new status
-    let newStatus: PostStatus;
-    if (action === "approve") {
-      newStatus = "Approved";
-    } else {
-      // For "request-changes", keep as Ready for Review
-      // The comment could be stored in a separate field
-      // For now, we just acknowledge the request
-      newStatus = "Ready for review";
-    }
-
-    // 7. Update in Notion (only if approving)
-    if (action === "approve") {
-      const result = await updatePostStatus(notionConfig, postId, newStatus, comment);
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          postId: result.postId,
-          newStatus: result.newStatus,
-          action,
-        },
-      });
-    } else {
-      // For changes requested, just acknowledge
-      // In a full implementation, you'd store the comment somewhere
-      return NextResponse.json({
-        success: true,
-        data: {
-          postId,
-          newStatus: post.status,
-          action,
-          comment: comment || null,
-          message: "Changes requested. We'll review your feedback.",
-        },
-      });
-    }
+    return NextResponse.json({
+      success: true,
+      data: {
+        postId: result.postId,
+        newStatus: result.newStatus,
+        action: result.action,
+        alreadyDone: result.alreadyDone ?? false,
+        message: result.message,
+      },
+    });
   } catch (error) {
     console.error("[api:review-item:update]", error);
     return NextResponse.json(

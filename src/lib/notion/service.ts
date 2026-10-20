@@ -120,10 +120,29 @@ export async function getPostById(
 
   try {
     const page = await notion.pages.retrieve({ page_id: postId });
+    // A review token only grants access to its own account's posts.
+    if (!pageBelongsToDataSource(page, config.postsDataSourceId)) {
+      return null;
+    }
     return parsePost(page);
   } catch {
     return null;
   }
+}
+
+function normalizeId(id: string): string {
+  return id.replace("collection://", "").replace(/-/g, "").toLowerCase();
+}
+
+/**
+ * True when the page's parent is the given data source.
+ * If Notion doesn't report a data source parent (older API shape), we can't
+ * verify, so we allow it rather than break existing accounts.
+ */
+export function pageBelongsToDataSource(page: unknown, dataSourceId: string): boolean {
+  const parent = (page as { parent?: { data_source_id?: string } }).parent;
+  if (!parent?.data_source_id || !dataSourceId) return true;
+  return normalizeId(parent.data_source_id) === normalizeId(dataSourceId);
 }
 
 export async function getPostByIgLink(
@@ -279,6 +298,55 @@ export async function updatePostStatus(
     postId,
     newStatus,
   };
+}
+
+// =============================================================================
+// FEEDBACK (client "Request changes" comments)
+// =============================================================================
+
+export interface CreateFeedbackInput {
+  postId: string;
+  postTitle: string;
+  comment: string;
+}
+
+/**
+ * Saves a client's "Request changes" comment to the account's Feedback database.
+ * Uses the same fields as the client's Notion feedback form so both land in one place.
+ */
+export async function createPostFeedback(
+  config: NotionConfig,
+  input: CreateFeedbackInput
+): Promise<{ feedbackId: string }> {
+  if (!config.feedbackDataSourceId) {
+    throw new Error("Feedback database not configured for this account");
+  }
+  const notion = getNotionClient();
+  const postUrl = `https://www.notion.so/${input.postId.replace(/-/g, "")}`;
+  const title = input.postTitle || "Untitled post";
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const page = await (notion.pages as any).create({
+    parent: {
+      type: "data_source_id",
+      data_source_id: config.feedbackDataSourceId.replace("collection://", ""),
+    },
+    properties: {
+      Feedback: { title: [{ text: { content: `Changes requested: ${title}`.slice(0, 200) } }] },
+      About: { select: { name: "A specific post" } },
+      "Which post?": {
+        rich_text: [
+          { text: { content: `${title} — ` } },
+          { text: { content: "open post", link: { url: postUrl } } },
+        ],
+      },
+      "How do you feel about it?": { select: { name: "Needs changes" } },
+      Comments: { rich_text: [{ text: { content: input.comment.slice(0, 2000) } }] },
+      Handled: { status: { name: "New" } },
+    },
+  });
+
+  return { feedbackId: (page as { id: string }).id };
 }
 
 // =============================================================================
