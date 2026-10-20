@@ -69,6 +69,7 @@ export default function ReviewPortalPage() {
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -104,13 +105,18 @@ export default function ReviewPortalPage() {
         }),
       });
 
+      const json = await res.json().catch(() => ({}));
       if (res.ok) {
+        setNotice({ kind: "ok", text: json?.data?.message || "Saved." });
         await fetchData();
         setActiveItem(null);
         setComment("");
+      } else {
+        setNotice({ kind: "error", text: json?.error || "Something went wrong. Please try again." });
       }
     } catch (err) {
       console.error("Failed to submit:", err);
+      setNotice({ kind: "error", text: "Couldn't reach the server. Please try again." });
     } finally {
       setSubmitting(false);
     }
@@ -207,6 +213,21 @@ export default function ReviewPortalPage() {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
+        {notice && (
+          <div
+            role="status"
+            className={`rounded-lg px-4 py-3 text-sm flex items-start justify-between gap-3 ${
+              notice.kind === "ok"
+                ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
+                : "bg-red-500/10 text-red-300 border border-red-500/30"
+            }`}
+          >
+            <span>{notice.text}</span>
+            <button onClick={() => setNotice(null)} className="text-xs opacity-70 hover:opacity-100">
+              Dismiss
+            </button>
+          </div>
+        )}
         {/* Summary Stats */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <h2 className="text-sm font-medium text-slate-400 mb-3">Overview</h2>

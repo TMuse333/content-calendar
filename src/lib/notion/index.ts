@@ -29,6 +29,7 @@ export {
   getPostById,
   getPostByIgLink,
   updatePostStatus,
+  createPostFeedback,
   // Topics
   getTopics,
   getTopicById,
@@ -36,4 +37,4 @@ export {
   getPostsSummary,
 } from "./service";
 
-export type { PostsSummary, UpdatePostStatusResult } from "./service";
+export type { PostsSummary, UpdatePostStatusResult, CreateFeedbackInput } from "./service";

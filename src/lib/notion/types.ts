@@ -182,6 +182,7 @@ export interface TopicLibraryItem {
 export interface NotionConfig {
   postsDataSourceId: string;            // Posts collection:// URL
   topicsDataSourceId: string;           // Topics collection:// URL
+  feedbackDataSourceId?: string;        // Feedback collection:// URL (client "Request changes" comments)
 }
 
 // =============================================================================
