@@ -16,6 +16,7 @@ interface Item {
   postDate?: string;
   slides: number;
   thumbnail?: string;
+  previewUrls: string[];
   notionUrl: string;
   issues: string[];
 }
@@ -48,6 +49,7 @@ export default function PipelinePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showIdeas, setShowIdeas] = useState(false);
+  const [open, setOpen] = useState<Item | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -127,12 +129,10 @@ export default function PipelinePage() {
             ) : (
               <div className="space-y-2">
                 {data.columns[c.id].map((item) => (
-                  <a
+                  <button
                     key={item.id}
-                    href={item.notionUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg p-3"
+                    onClick={() => setOpen(item)}
+                    className="block w-full text-left bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg p-3"
                   >
                     <div className="flex gap-3">
                       <div className="w-12 h-14 bg-slate-800 rounded flex-shrink-0 flex items-center justify-center overflow-hidden">
@@ -146,7 +146,6 @@ export default function PipelinePage() {
                             .join(" · ")}
                         </p>
                       </div>
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-600 flex-shrink-0" />
                     </div>
                     {item.issues.length > 0 && (
                       <ul className="mt-2 space-y-0.5">
@@ -157,7 +156,7 @@ export default function PipelinePage() {
                         ))}
                       </ul>
                     )}
-                  </a>
+                  </button>
                 ))}
               </div>
             )}
@@ -168,6 +167,64 @@ export default function PipelinePage() {
       <button onClick={() => setShowIdeas((v) => !v)} className="mt-6 text-sm text-slate-400 hover:text-white">
         {showIdeas ? "Hide ideas" : `Show ideas (${data.counts.ideas})`}
       </button>
+
+      {open && <PostViewer item={open} onClose={() => setOpen(null)} />}
+    </div>
+  );
+}
+
+function PostViewer({ item, onClose }: { item: Item; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
+      <button aria-label="Close" className="absolute inset-0 bg-black/80" onClick={onClose} />
+      <div className="relative w-full max-w-lg max-h-[95vh] overflow-y-auto bg-slate-900 rounded-2xl shadow-2xl">
+        <div className="aspect-[4/5] bg-black">
+          {item.previewUrls.length > 0 ? (
+            <PostPreview urls={item.previewUrls} alt={item.title} controls className="w-full h-full object-contain" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm">No slides attached yet</div>
+          )}
+        </div>
+        <div className="p-4 space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-white font-semibold leading-snug">{item.title}</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {[item.status, item.type, fmtDate(item.postDate), item.slides > 1 ? `${item.slides} slides` : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </div>
+            <button onClick={onClose} className="text-sm text-slate-400 hover:text-white">Close</button>
+          </div>
+          {item.questionAnswered && (
+            <p className="text-sm text-slate-300">&ldquo;{item.questionAnswered}&rdquo;</p>
+          )}
+          {item.issues.length > 0 && (
+            <ul className="space-y-0.5">
+              {item.issues.map((iss) => (
+                <li key={iss} className="text-xs text-red-400 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> {iss}
+                </li>
+              ))}
+            </ul>
+          )}
+          <a
+            href={item.notionUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 pt-1"
+          >
+            Open in Notion <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

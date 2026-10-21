@@ -14,6 +14,7 @@ export interface PipelineItem {
   postDate?: string;
   slides: number;
   thumbnail?: string;
+  previewUrls: string[];
   notionUrl: string;
   issues: string[];
 }
@@ -60,6 +61,7 @@ export function buildPipeline(posts: NotionPost[]) {
       postDate: p.postDate,
       slides,
       thumbnail: p.previewUrls?.[0] ?? p.previewUrl,
+      previewUrls: p.previewUrls?.length ? p.previewUrls : p.previewUrl ? [p.previewUrl] : [],
       notionUrl: `https://www.notion.so/${p.id.replace(/-/g, "")}`,
       issues: issuesFor(p),
     });
