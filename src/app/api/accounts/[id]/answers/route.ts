@@ -9,7 +9,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb/clientPromise";
 import { getAccountById } from "@/lib/mongodb/accounts";
-import { cleanAnswers, questionsFor } from "@/lib/questions/sets";
+import { cleanAnswers, questionsFor, QUESTION_SETS } from "@/lib/questions/sets";
+import { writeAnswersToNotion } from "@/lib/notion/answers";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,13 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (Object.keys(answers).length === 0) {
     return NextResponse.json({ error: "Please answer at least one question." }, { status: 400 });
   }
+  const notion = account.notion?.postsDataSourceId
+    ? await writeAnswersToNotion(
+        { postsDataSourceId: account.notion.postsDataSourceId, topicsDataSourceId: account.notion.topicsDataSourceId || "" },
+        { clientName: account.name, setLabel: QUESTION_SETS.content.label, questions: QUESTION_SETS.content.questions, answers, source: "Questions page" }
+      )
+    : null;
   const col = await collection();
-  await col.insertOne({ accountId: id, answers, createdAt: new Date(), usedInPosts: false });
+  await col.insertOne({ accountId: id, setId: "content", answers, createdAt: new Date(), usedInPosts: false, notionPageId: notion?.pageId ?? null });
   return NextResponse.json({ success: true, saved: Object.keys(answers).length });
 }
