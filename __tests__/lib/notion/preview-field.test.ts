@@ -36,3 +36,24 @@ describe("extractFileOrUrl (Notion Preview column)", () => {
     expect(extractFileOrUrl(null)).toBeUndefined();
   });
 });
+
+import { extractAllFilesOrUrl } from "@/lib/notion/service";
+
+describe("extractAllFilesOrUrl (carousel slides)", () => {
+  it("returns every slide in order", () => {
+    expect(
+      extractAllFilesOrUrl({
+        files: [
+          { name: "1.png", type: "file", file: { url: "https://s3/1.png?s" } },
+          { name: "2.png", type: "file", file: { url: "https://s3/2.png?s" } },
+          { name: "3.png", type: "external", external: { url: "https://cdn/3.png" } },
+        ],
+      })
+    ).toEqual(["https://s3/1.png?s", "https://s3/2.png?s", "https://cdn/3.png"]);
+  });
+  it("handles URL properties and empty values", () => {
+    expect(extractAllFilesOrUrl({ url: "https://x/a.jpg" })).toEqual(["https://x/a.jpg"]);
+    expect(extractAllFilesOrUrl({ files: [] })).toEqual([]);
+    expect(extractAllFilesOrUrl(undefined)).toEqual([]);
+  });
+});

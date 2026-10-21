@@ -79,6 +79,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       caption: post.caption,
       cta: post.cta,
       previewUrl: post.previewUrl,
+      previewUrls: post.previewUrls,
       questionAnswered: post.questionAnswered,
     }));
 
