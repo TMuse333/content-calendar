@@ -20,6 +20,7 @@ interface ShareData {
   clientName: string;
   message: string | null;
   posts: SharePost[];
+  comingUp?: { date: string; title: string; type?: string }[];
   questionSet: {
     id: string;
     label: string;
@@ -227,6 +228,22 @@ export default function SharePage() {
               <PostCard key={p.id} post={p} code={code} index={i} />
             ))}
           </div>
+        )}
+
+        {data.comingUp && data.comingUp.length > 0 && (
+          <section>
+            <h2 className="text-xl font-bold mb-1">Coming up</h2>
+            <p className="text-slate-400 text-sm mb-3">The rest of the plan. You&apos;ll get these to look at in later links.</p>
+            <ul className="divide-y divide-slate-800 rounded-2xl border border-slate-800 bg-slate-900">
+              {data.comingUp.map((c, i) => (
+                <li key={i} className="flex gap-3 p-3 text-sm">
+                  <span className="w-24 flex-shrink-0 text-slate-400">{fmtDate(c.date)}</span>
+                  <span className="flex-1 text-slate-200">{c.title}</span>
+                  {c.type && <span className="text-xs text-slate-500">{c.type}</span>}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {data.questionSet && (
