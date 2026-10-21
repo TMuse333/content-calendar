@@ -134,7 +134,8 @@ export default function SharePage() {
   const draftKey = `share-draft:${code}`;
 
   useEffect(() => {
-    fetch(`/api/share/${code}`)
+    const preview = new URLSearchParams(window.location.search).get("preview") === "1";
+    fetch(`/api/share/${code}${preview ? "?preview=1" : ""}`)
       .then(async (r) => {
         const j = await r.json();
         if (!r.ok) throw new Error(j.error);

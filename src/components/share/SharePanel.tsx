@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Copy, Loader2, X } from "lucide-react";
+import { Check, Copy, Eye, Loader2, X } from "lucide-react";
+import { describeOpens } from "@/lib/share/opens";
 
 export interface ShareablePost {
   id: string;
@@ -18,6 +19,9 @@ interface LinkRow {
   createdAt: string;
   expiresAt: string;
   revoked?: boolean;
+  openCount?: number;
+  firstOpenedAt?: string;
+  lastOpenedAt?: string;
 }
 
 export function SharePanel({
@@ -109,7 +113,7 @@ export function SharePanel({
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {copied ? "Copied" : "Copy"}
               </button>
             </div>
-            <a href={created} target="_blank" rel="noreferrer" className="inline-block text-sm text-blue-400">
+            <a href={`${created}?preview=1`} target="_blank" rel="noreferrer" className="inline-block text-sm text-blue-400">
               Preview what they&apos;ll see →
             </a>
           </div>
@@ -186,19 +190,26 @@ export function SharePanel({
             <div className="space-y-2">
               {links.slice(0, 5).map((l) => {
                 const expired = new Date(l.expiresAt).getTime() < Date.now();
+                const opens = describeOpens(l);
                 return (
-                  <div key={l.code} className="flex items-center gap-2 text-xs">
-                    <span className="flex-1 text-slate-400">
-                      {new Date(l.createdAt).toLocaleDateString()} · {l.postIds.length} posts
-                      {l.questionSet ? ` + ${l.questionSet}` : ""}
-                      {l.revoked ? " · revoked" : expired ? " · expired" : ""}
-                    </span>
-                    {!l.revoked && !expired && (
-                      <>
-                        <button onClick={() => copy(l.url)} className="text-blue-400">Copy</button>
-                        <button onClick={() => revoke(l.code)} className="text-slate-500 hover:text-red-400">Revoke</button>
-                      </>
-                    )}
+                  <div key={l.code} className="text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="flex-1 text-slate-400">
+                        {new Date(l.createdAt).toLocaleDateString()} · {l.postIds.length} posts
+                        {l.questionSet ? ` + ${l.questionSet}` : ""}
+                        {l.revoked ? " · revoked" : expired ? " · expired" : ""}
+                      </span>
+                      {!l.revoked && !expired && (
+                        <>
+                          <a href={`${l.url}?preview=1`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-white">Preview</a>
+                          <button onClick={() => copy(l.url)} className="text-blue-400">Copy</button>
+                          <button onClick={() => revoke(l.code)} className="text-slate-500 hover:text-red-400">Revoke</button>
+                        </>
+                      )}
+                    </div>
+                    <p className={`mt-0.5 flex items-center gap-1 ${opens.opened ? "text-emerald-400" : "text-slate-600"}`}>
+                      <Eye className="w-3 h-3" /> {opens.text}
+                    </p>
                   </div>
                 );
               })}
