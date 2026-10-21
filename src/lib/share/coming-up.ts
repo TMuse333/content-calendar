@@ -19,6 +19,9 @@ export interface ComingUpItem {
 }
 
 const PLANNED = new Set(["Idea", "Draft", "Ready for review", "Approved", "Scheduled"]);
+// Listing graphics/videos are the client's own listings (and often placeholders
+// like "listing TBD"); Coming up only shows the content plan.
+const HIDDEN_TYPES = new Set(["Listing graphic", "Listing video"]);
 
 export function buildComingUp(
   posts: ComingUpInput[],
@@ -31,6 +34,7 @@ export function buildComingUp(
   return posts
     .filter((p) => p.postDate && p.postDate.slice(0, 10) >= today)
     .filter((p) => PLANNED.has(p.status))
+    .filter((p) => !p.type || !HIDDEN_TYPES.has(p.type))
     .filter((p) => !exclude.has(norm(p.id)))
     .sort((a, b) => a.postDate!.localeCompare(b.postDate!))
     .slice(0, limit)
