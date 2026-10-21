@@ -8,6 +8,7 @@ const posts = [
   { id: "dddd-4", title: "Already posted", status: "Posted", postDate: "2026-10-25" },
   { id: "eeee-5", title: "In the past", status: "Draft", postDate: "2026-10-01" },
   { id: "ffff-6", title: "No date", status: "Draft" },
+  { id: "gggg-7", title: "Listing graphic (listing TBD)", type: "Listing graphic", status: "Idea", postDate: "2026-10-22" },
 ];
 
 describe("buildComingUp", () => {
@@ -22,6 +23,11 @@ describe("buildComingUp", () => {
   it("never includes slides or strategy fields", () => {
     const r = buildComingUp(posts, [], "2026-10-21");
     for (const item of r) expect(Object.keys(item).sort()).toEqual(["date", "title", "type"]);
+  });
+
+  it("hides listing graphics/videos (client's own listings, often placeholders)", () => {
+    const r = buildComingUp(posts, [], "2026-10-21");
+    expect(r.some((c) => c.title.includes("listing TBD"))).toBe(false);
   });
 
   it("respects the limit", () => {
