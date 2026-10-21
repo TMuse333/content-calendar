@@ -66,3 +66,22 @@ describe("Notion answers", () => {
     expect(created).toHaveLength(0);
   });
 });
+
+import { commentOnPost } from "@/lib/notion/answers";
+
+describe("notifications", () => {
+  it("@mentions NOTION_NOTIFY_USER_ID on comments when set", async () => {
+    process.env.NOTION_NOTIFY_USER_ID = "user-123";
+    const create = vi.fn(async () => ({}));
+    expect(await commentOnPost("post-1", "Greg: 👍", { comments: { create } })).toBe(true);
+    const rt = (create.mock.calls[0] as unknown as [{ rich_text: Array<Record<string, unknown>> }])[0].rich_text;
+    expect(rt[0]).toEqual({ type: "mention", mention: { user: { id: "user-123" } } });
+    delete process.env.NOTION_NOTIFY_USER_ID;
+  });
+  it("works without a mention when unset", async () => {
+    const create = vi.fn(async () => ({}));
+    await commentOnPost("post-1", "hi", { comments: { create } });
+    const rt = (create.mock.calls[0] as unknown as [{ rich_text: Array<Record<string, unknown>> }])[0].rich_text;
+    expect(rt).toEqual([{ text: { content: "hi" } }]);
+  });
+});

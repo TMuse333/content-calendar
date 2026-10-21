@@ -59,6 +59,15 @@ export async function findAnswersDataSource(
 
 const chunk = (s: string) => s.slice(0, 1900);
 
+/**
+ * Who to @mention so client input pushes a Notion notification to their phone.
+ * Set NOTION_NOTIFY_USER_ID (Thomas's Notion user id) in the environment.
+ */
+function mention(): unknown[] {
+  const id = process.env.NOTION_NOTIFY_USER_ID;
+  return id ? [{ type: "mention", mention: { user: { id } } }, { text: { content: " " } }] : [];
+}
+
 export interface WriteAnswersInput {
   clientName: string;
   setLabel: string;
@@ -93,7 +102,10 @@ export async function writeAnswersToNotion(
     }
 
     const children: unknown[] = [
-      { type: "paragraph", paragraph: { rich_text: [{ text: { content: `Source: ${input.source}` } }] } },
+      {
+        type: "paragraph",
+        paragraph: { rich_text: [...mention(), { text: { content: `New answers from ${input.clientName} · Source: ${input.source}` } }] },
+      },
     ];
     for (const q of input.questions) {
       const a = input.answers[q.id];
@@ -122,7 +134,7 @@ export async function commentOnPost(
   try {
     await client.comments.create({
       parent: { page_id: postId },
-      rich_text: [{ text: { content: chunk(text) } }],
+      rich_text: [...mention(), { text: { content: chunk(text) } }],
     });
     return true;
   } catch (err) {
