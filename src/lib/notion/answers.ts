@@ -126,6 +126,34 @@ export async function writeAnswersToNotion(
   }
 }
 
+/** The Notion page that holds the client's Posts database (e.g. "Greg Content Calendar"). */
+export async function findClientPageId(
+  config: NotionConfig,
+  client: AnyClient = getNotionClient()
+): Promise<string | null> {
+  try {
+    const ds = await client.dataSources.retrieve({ data_source_id: stripId(config.postsDataSourceId) });
+    const databaseId: string | undefined = ds?.parent?.database_id;
+    if (!databaseId) return null;
+    const db = await client.databases.retrieve({ database_id: databaseId });
+    return db?.parent?.page_id ?? null;
+  } catch (err) {
+    console.warn("[notion:client-page] lookup failed", err);
+    return null;
+  }
+}
+
+/** Comment (with @mention) on the client's calendar page. Best effort. */
+export async function notifyOnClientPage(
+  config: NotionConfig,
+  text: string,
+  client: AnyClient = getNotionClient()
+): Promise<boolean> {
+  const pageId = await findClientPageId(config, client);
+  if (!pageId) return false;
+  return commentOnPost(pageId, text, client);
+}
+
 export async function commentOnPost(
   postId: string,
   text: string,

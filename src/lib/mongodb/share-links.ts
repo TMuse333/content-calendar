@@ -28,6 +28,21 @@ export async function revokeShareLink(accountId: string, code: string) {
   await (await db()).collection<ShareLink>("share_links").updateOne({ accountId, code }, { $set: { revoked: true } });
 }
 
+/**
+ * Count one open of a share link. Returns true if this was the first open
+ * (so the caller can notify Thomas once, not on every reload).
+ */
+export async function recordShareOpen(code: string, now = new Date()): Promise<boolean> {
+  const before = await (await db())
+    .collection<ShareLink>("share_links")
+    .findOneAndUpdate(
+      { code },
+      { $inc: { openCount: 1 }, $set: { lastOpenedAt: now }, $min: { firstOpenedAt: now } },
+      { returnDocument: "before", projection: { openCount: 1 } }
+    );
+  return !!before && !before.openCount;
+}
+
 export async function saveShareReaction(doc: {
   code: string;
   accountId: string;

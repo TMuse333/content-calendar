@@ -18,6 +18,10 @@ export interface ShareLink {
   createdAt: Date;
   expiresAt: Date;
   revoked?: boolean;
+  /** Open tracking (client page loads; admin previews excluded). */
+  openCount?: number;
+  firstOpenedAt?: Date;
+  lastOpenedAt?: Date;
 }
 
 export function newShareCode(): string {
