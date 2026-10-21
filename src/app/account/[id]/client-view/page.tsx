@@ -31,6 +31,7 @@ import {
   Camera,
   Link,
 } from "lucide-react";
+import { PostPreview } from "@/components/media/PostPreview";
 
 // Instagram icon as custom SVG (lucide doesn't have it)
 function InstagramIcon({ className }: { className?: string }) {
@@ -610,6 +611,7 @@ function ReviewTab({
   const [selectedPost, setSelectedPost] = useState<ReviewPost | null>(null);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   const handleAction = async (postId: string, action: "approve" | "request-changes") => {
     setSubmitting(true);
@@ -620,17 +622,20 @@ function ReviewTab({
         body: JSON.stringify({ action, comment: comment || undefined }),
       });
 
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const err = await res.json();
-        console.error("Review action failed:", err);
+        console.error("Review action failed:", json);
+        setNotice({ kind: "error", text: json?.error || "Something went wrong. Please try again." });
         return;
       }
 
+      setNotice({ kind: "ok", text: json?.data?.message || "Saved." });
       setSelectedPost(null);
       setComment("");
       onRefresh();
     } catch (err) {
       console.error(err);
+      setNotice({ kind: "error", text: "Couldn't reach the server. Please try again." });
     } finally {
       setSubmitting(false);
     }
@@ -642,6 +647,22 @@ function ReviewTab({
       <p className="text-slate-400 mb-6">
         Review and approve content before it goes live.
       </p>
+
+      {notice && (
+        <div
+          role="status"
+          className={`mb-4 rounded-lg px-4 py-3 text-sm flex items-start justify-between gap-3 ${
+            notice.kind === "ok"
+              ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
+              : "bg-red-500/10 text-red-300 border border-red-500/30"
+          }`}
+        >
+          <span>{notice.text}</span>
+          <button onClick={() => setNotice(null)} className="text-xs opacity-70 hover:opacity-100">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {posts.length === 0 ? (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center">
@@ -658,15 +679,7 @@ function ReviewTab({
             >
               {/* Preview */}
               <div className="w-24 h-24 bg-slate-800 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
-                {post.previewUrl ? (
-                  <img
-                    src={post.previewUrl}
-                    alt={post.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <FileText className="w-8 h-8 text-slate-600" />
-                )}
+                <PostPreview url={post.previewUrl} alt={post.title} iconClassName="w-8 h-8 text-slate-600" />
               </div>
 
               {/* Content */}
@@ -772,11 +785,7 @@ function PostDetailModal({
           {/* Preview */}
           <div className="flex-1">
             <div className="aspect-[4/5] bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
-              {post.previewUrl ? (
-                <img src={post.previewUrl} alt={post.title} className="w-full h-full object-cover" />
-              ) : (
-                <FileText className="w-20 h-20 text-slate-600" />
-              )}
+              <PostPreview url={post.previewUrl} alt={post.title} controls className="w-full h-full object-contain bg-black" iconClassName="w-20 h-20 text-slate-600" />
             </div>
           </div>
 
@@ -877,15 +886,7 @@ function PostedTab({
             >
               {/* Preview */}
               <div className="aspect-video bg-slate-800 flex items-center justify-center overflow-hidden">
-                {post.previewUrl ? (
-                  <img
-                    src={post.previewUrl}
-                    alt={post.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <FileText className="w-12 h-12 text-slate-600" />
-                )}
+                <PostPreview url={post.previewUrl} alt={post.title} iconClassName="w-12 h-12 text-slate-600" />
               </div>
 
               {/* Content */}
