@@ -24,6 +24,7 @@ describe("buildPipeline", () => {
   });
   it("counts slides and links to Notion", () => {
     expect(r.columns["waiting-client"][0].slides).toBe(3);
+    expect(r.columns["waiting-client"][0].previewUrls).toEqual(["a", "b", "c"]);
     expect(r.columns["waiting-client"][0].notionUrl).toBe("https://www.notion.so/1");
   });
   it("flags posts the client would see broken", () => {
