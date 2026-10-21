@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { AlertTriangle, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Share2 } from "lucide-react";
 import { PostPreview } from "@/components/media/PostPreview";
+import { SharePanel } from "@/components/share/SharePanel";
 
 type Column = "waiting-client" | "building" | "to-schedule" | "scheduled" | "ideas";
 
@@ -50,6 +51,7 @@ export default function PipelinePage() {
   const [loading, setLoading] = useState(true);
   const [showIdeas, setShowIdeas] = useState(false);
   const [open, setOpen] = useState<Item | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,6 +93,14 @@ export default function PipelinePage() {
           <h1 className="text-2xl font-bold text-white">Pipeline</h1>
           <p className="text-slate-400 mt-1 text-sm">What&apos;s pending for {data.accountName}, live from Notion.</p>
         </div>
+        <div className="flex gap-2">
+        <button
+          onClick={() => setSharing(true)}
+          className="flex items-center gap-2 text-sm text-white px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-400"
+        >
+          <Share2 className="w-4 h-4" />
+          Share
+        </button>
         <button
           onClick={load}
           className="flex items-center gap-2 text-sm text-slate-300 hover:text-white px-3 py-2 rounded-lg bg-slate-800"
@@ -98,6 +108,7 @@ export default function PipelinePage() {
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </button>
+        </div>
       </div>
 
       {/* Summary */}
@@ -169,6 +180,15 @@ export default function PipelinePage() {
       </button>
 
       {open && <PostViewer item={open} onClose={() => setOpen(null)} />}
+      {sharing && (
+        <SharePanel
+          accountId={id}
+          posts={(["waiting-client", "building", "to-schedule", "scheduled"] as Column[]).flatMap((c) =>
+            data.columns[c].map((i) => ({ id: i.id, title: i.title, status: i.status, slides: i.slides }))
+          )}
+          onClose={() => setSharing(false)}
+        />
+      )}
     </div>
   );
 }
