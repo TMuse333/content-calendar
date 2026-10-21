@@ -16,6 +16,7 @@ import {
   FileText,
   Calendar,
 } from "lucide-react";
+import { PostPreview } from "@/components/media/PostPreview";
 
 /**
  * Client-safe post view (subset of NotionPost)
@@ -269,15 +270,7 @@ export default function ReviewPortalPage() {
                   {/* Preview Image */}
                   {post.previewUrl ? (
                     <div className="aspect-video bg-slate-800 relative">
-                      <img
-                        src={post.previewUrl}
-                        alt={post.title}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
+                      <PostPreview url={post.previewUrl} alt={post.title} controls className="w-full h-full object-contain bg-black" />
                       {!account.isPaid && (
                         <div className="absolute top-2 right-2 px-2 py-1 bg-black/70 text-amber-400 text-xs rounded">
                           Preview
@@ -415,12 +408,7 @@ export default function ReviewPortalPage() {
                 >
                   {post.previewUrl ? (
                     <div className="aspect-square bg-slate-800 relative">
-                      <img
-                        src={post.previewUrl}
-                        alt={post.title}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
+                      <PostPreview url={post.previewUrl} alt={post.title} />
                       <div className="absolute top-2 right-2">
                         <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                       </div>
@@ -460,12 +448,7 @@ export default function ReviewPortalPage() {
                 >
                   {post.previewUrl ? (
                     <div className="aspect-square bg-slate-800">
-                      <img
-                        src={post.previewUrl}
-                        alt={post.title}
-                        className="w-full h-full object-cover opacity-80"
-                        referrerPolicy="no-referrer"
-                      />
+                      <PostPreview url={post.previewUrl} alt={post.title} className="w-full h-full object-cover opacity-80" />
                     </div>
                   ) : (
                     <div className="aspect-square bg-slate-800 flex items-center justify-center">
