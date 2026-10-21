@@ -74,8 +74,14 @@ export function Sidebar() {
       title: "Tracking",
       items: [
         {
+          label: "Pipeline",
+          href: `${accountBase}/pipeline`,
+          icon: Calendar,
+          description: "What's pending",
+        },
+        {
           label: "Posts",
-          href: `${accountBase}/library`,
+          href: `${accountBase}/content`,
           icon: Grid,
           description: "All posts & metrics",
         },
