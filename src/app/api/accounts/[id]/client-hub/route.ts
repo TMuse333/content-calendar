@@ -83,11 +83,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 p.status === "Scheduled" ||
                 p.status === "Approved")
           );
+          const plannedAtStage = topicPosts.filter(
+            (p) =>
+              p.decisionStage === ds.key &&
+              (p.status === "Draft" || p.status === "Ready for review")
+          );
           return {
             stage: ds.stage,
             label: ds.label,
             covered: postsAtStage.length > 0,
             postCount: postsAtStage.length,
+            planned: plannedAtStage.length > 0,
+            plannedQuestions: plannedAtStage.map((p) => ({
+              id: p.id,
+              question: p.questionAnswered || p.title,
+              status: p.status,
+            })),
             // Client-safe post info (question answered only)
             questions: postsAtStage.map((p) => ({
               id: p.id,
@@ -98,6 +109,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         });
 
         const coveredStages = stageCoverage.filter((s) => s.covered).length;
+        const plannedStages = stageCoverage.filter((s) => !s.covered && s.planned).length;
 
         return {
           id: topic.id,
@@ -109,6 +121,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           coverage: {
             stages: stageCoverage,
             coveredCount: coveredStages,
+            plannedCount: plannedStages,
             totalStages: 6,
             percentage: Math.round((coveredStages / 6) * 100),
           },
@@ -126,9 +139,27 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         type: p.type,
         topicId: p.topicId,
         previewUrl: p.previewUrl,
+        previewUrls: p.previewUrls,
         caption: p.caption,
         cta: p.cta,
+        postDate: p.postDate,
       }));
+
+    // 5b. Coming up: in-progress and approved posts (client-safe fields only).
+    // Ideas stay internal until they're being worked on.
+    const upcoming = allPosts
+      .filter((p) => p.status === "Draft" || p.status === "Approved")
+      .map((p) => ({
+        id: p.id,
+        title: p.title,
+        questionAnswered: p.questionAnswered,
+        type: p.type,
+        topicId: p.topicId,
+        status: p.status,
+        postDate: p.postDate,
+        previewUrls: p.previewUrls,
+      }))
+      .sort((a, b) => (a.postDate ?? "9999").localeCompare(b.postDate ?? "9999"));
 
     // 6. Posted content (client-safe fields only)
     const posted = allPosts
@@ -141,6 +172,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         topicId: p.topicId,
         status: p.status,
         previewUrl: p.previewUrl,
+        previewUrls: p.previewUrls,
+        postDate: p.postDate,
       }));
 
     // 7. Summary stats
@@ -173,6 +206,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       topics: topicsWithCoverage,
       topicNames,
       needsReview,
+      upcoming,
       posted,
       summary,
     });

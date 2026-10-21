@@ -151,7 +151,9 @@ export interface NotionPost {
   videoFormat?: string;                 // Hook, story, etc.
   caption?: string;                     // Post caption
   cta?: string;                         // Call to action
-  previewUrl?: string;                  // Preview image/video
+  previewUrl?: string;                  // Preview image/video (first file)
+  previewUrls?: string[];               // All Preview files in order (carousel slides)
+  postDate?: string;                    // Planned/actual post date (ISO)
 
   // Tracking
   successMetric?: string;               // How we measure success

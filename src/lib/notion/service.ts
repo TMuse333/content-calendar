@@ -78,6 +78,21 @@ const MEDIA_EXT = /\.(mp4|mov|m4v|webm|jpe?g|png|gif|webp|avif)$/i;
  * If the URL itself has no media extension but the file name does, the name's
  * extension is added as a URL fragment so the UI knows to play it as video.
  */
+export function extractAllFilesOrUrl(prop: unknown): string[] {
+  if (!prop || typeof prop !== "object") return [];
+  const p = prop as { url?: string; files?: unknown[] };
+  if (p.url) return [p.url];
+  return (p.files ?? [])
+    .map((f) => extractFileOrUrl({ files: [f] }))
+    .filter((u): u is string => Boolean(u));
+}
+
+function extractDateStart(prop: unknown): string | undefined {
+  if (!prop || typeof prop !== "object") return undefined;
+  const p = prop as { date?: { start?: string } | null };
+  return p.date?.start ?? undefined;
+}
+
 export function extractFileOrUrl(prop: unknown): string | undefined {
   if (!prop || typeof prop !== "object") return undefined;
   const p = prop as {
@@ -209,6 +224,8 @@ function parsePost(page: unknown): NotionPost {
     caption: extractRichText(props["Caption"]),
     cta: extractRichText(props["CTA"]),
     previewUrl: extractFileOrUrl(props["Preview"]),
+    previewUrls: extractAllFilesOrUrl(props["Preview"]),
+    postDate: extractDateStart(props["Post date"]),
     successMetric: extractSelect(props["Success metric"]),
     answerCheck: extractCheckbox(props["Answer check"]),
     igPostLink: extractUrl(props["IG post link"]),

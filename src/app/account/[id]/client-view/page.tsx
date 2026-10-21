@@ -56,6 +56,12 @@ interface StageCoverage {
     question: string;
     status: string;
   }[];
+  planned?: boolean;
+  plannedQuestions?: {
+    id: string;
+    question: string;
+    status: string;
+  }[];
 }
 
 interface TopicWithCoverage {
@@ -68,6 +74,7 @@ interface TopicWithCoverage {
   coverage: {
     stages: StageCoverage[];
     coveredCount: number;
+    plannedCount?: number;
     totalStages: number;
     percentage: number;
   };
@@ -81,8 +88,21 @@ interface ReviewPost {
   type?: string;
   topicId?: string;
   previewUrl?: string;
+  previewUrls?: string[];
   caption?: string;
   cta?: string;
+  postDate?: string;
+}
+
+interface UpcomingPost {
+  id: string;
+  title: string;
+  questionAnswered?: string;
+  type?: string;
+  topicId?: string;
+  status: string;
+  postDate?: string;
+  previewUrls?: string[];
 }
 
 interface PostedPost {
@@ -93,6 +113,8 @@ interface PostedPost {
   topicId?: string;
   status: string;
   previewUrl?: string;
+  previewUrls?: string[];
+  postDate?: string;
 }
 
 interface ClientHubData {
@@ -108,6 +130,7 @@ interface ClientHubData {
   topics: TopicWithCoverage[];
   topicNames: Record<string, string>;
   needsReview: ReviewPost[];
+  upcoming?: UpcomingPost[];
   posted: PostedPost[];
   summary: {
     topicsActive: number;
@@ -384,6 +407,7 @@ export default function ClientHubPage() {
           {activeTab === "review" && (
             <ReviewTab
               posts={data.needsReview}
+              upcoming={data.upcoming ?? []}
               topicNames={data.topicNames}
               onRefresh={fetchData}
               accountId={accountId}
@@ -508,9 +532,9 @@ function TopicCard({
 
           {/* Progress bar */}
           <div className="mt-3 flex items-center gap-3">
-            <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden flex">
               <div
-                className={`h-full rounded-full transition-all ${
+                className={`h-full transition-all ${
                   topic.coverage.percentage === 100
                     ? "bg-emerald-500"
                     : topic.coverage.percentage >= 50
@@ -519,9 +543,18 @@ function TopicCard({
                 }`}
                 style={{ width: `${topic.coverage.percentage}%` }}
               />
+              <div
+                className="h-full bg-slate-500/60"
+                style={{
+                  width: `${Math.round(((topic.coverage.plannedCount ?? 0) / topic.coverage.totalStages) * 100)}%`,
+                }}
+              />
             </div>
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-slate-400 whitespace-nowrap">
               {topic.coverage.coveredCount}/{topic.coverage.totalStages} stages
+              {(topic.coverage.plannedCount ?? 0) > 0 && (
+                <span className="text-slate-500"> · {topic.coverage.plannedCount} in progress</span>
+              )}
             </span>
           </div>
         </div>
@@ -545,6 +578,8 @@ function TopicCard({
               <div key={stage.stage} className="flex items-start gap-3">
                 {stage.covered ? (
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                ) : stage.planned ? (
+                  <Clock className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
                 ) : (
                   <Circle className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
                 )}
@@ -565,9 +600,18 @@ function TopicCard({
                       ))}
                     </div>
                   )}
-                  {!stage.covered && (
+                  {!stage.covered && (stage.plannedQuestions?.length ?? 0) > 0 && (
+                    <div className="mt-1 space-y-1">
+                      {stage.plannedQuestions!.map((q) => (
+                        <p key={q.id} className="text-xs text-slate-500 pl-2 border-l border-slate-700 italic">
+                          In progress: &ldquo;{q.question}&rdquo;
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {!stage.covered && !stage.planned && (
                     <p className="text-xs text-amber-500/70 mt-1">
-                      Need content here
+                      Up next
                     </p>
                   )}
                 </div>
@@ -599,11 +643,13 @@ function TopicCard({
 
 function ReviewTab({
   posts,
+  upcoming,
   topicNames,
   onRefresh,
   accountId,
 }: {
   posts: ReviewPost[];
+  upcoming: UpcomingPost[];
   topicNames: Record<string, string>;
   onRefresh: () => void;
   accountId: string;
@@ -679,7 +725,7 @@ function ReviewTab({
             >
               {/* Preview */}
               <div className="w-24 h-24 bg-slate-800 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
-                <PostPreview url={post.previewUrl} alt={post.title} iconClassName="w-8 h-8 text-slate-600" />
+                <PostPreview url={post.previewUrl} urls={post.previewUrls} alt={post.title} iconClassName="w-8 h-8 text-slate-600" />
               </div>
 
               {/* Content */}
@@ -735,6 +781,96 @@ function ReviewTab({
           }}
         />
       )}
+
+      <ComingUp posts={upcoming} topicNames={topicNames} />
+    </div>
+  );
+}
+
+function formatPostDate(iso?: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+function ComingUp({
+  posts,
+  topicNames,
+}: {
+  posts: UpcomingPost[];
+  topicNames: Record<string, string>;
+}) {
+  const [open, setOpen] = useState<UpcomingPost | null>(null);
+  if (posts.length === 0) return null;
+
+  return (
+    <div className="mt-10">
+      <h2 className="text-xl font-bold text-white mb-1">Coming Up</h2>
+      <p className="text-slate-400 mb-4 text-sm">
+        What we&apos;re working on next. You&apos;ll be asked to approve each one before it goes out.
+      </p>
+      <div className="space-y-3">
+        {posts.map((post) => {
+          const date = formatPostDate(post.postDate);
+          const hasPreview = (post.previewUrls?.length ?? 0) > 0;
+          return (
+            <button
+              key={post.id}
+              onClick={() => hasPreview && setOpen(post)}
+              className={`w-full text-left bg-slate-900 border border-slate-800 rounded-xl p-4 flex gap-4 ${
+                hasPreview ? "hover:border-slate-700" : "cursor-default"
+              }`}
+            >
+              <div className="w-16 h-20 bg-slate-800 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
+                <PostPreview urls={post.previewUrls} alt={post.title} iconClassName="w-6 h-6 text-slate-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  {post.type && <span className="text-xs text-slate-500">{post.type}</span>}
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      post.status === "Approved"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "bg-amber-500/15 text-amber-400"
+                    }`}
+                  >
+                    {post.status === "Approved" ? "Approved" : "In progress"}
+                  </span>
+                  {date && <span className="text-xs text-slate-400">· {date}</span>}
+                </div>
+                <p className="text-white font-medium leading-snug">
+                  {post.questionAnswered || post.title}
+                </p>
+                {post.topicId && topicNames[post.topicId] && (
+                  <p className="text-xs text-emerald-500 mt-1">{topicNames[post.topicId]}</p>
+                )}
+                {hasPreview && <p className="text-xs text-slate-500 mt-1">Tap for a first look</p>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button aria-label="Close" className="absolute inset-0 bg-black/80" onClick={() => setOpen(null)} />
+          <div className="relative w-full max-w-md bg-slate-900 rounded-2xl overflow-hidden">
+            <div className="aspect-[4/5] bg-black">
+              <PostPreview urls={open.previewUrls} alt={open.title} controls className="w-full h-full object-contain" />
+            </div>
+            <div className="p-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-white font-medium">{open.questionAnswered || open.title}</p>
+                <p className="text-xs text-slate-400 mt-1">Draft preview, not final yet.</p>
+              </div>
+              <button onClick={() => setOpen(null)} className="text-sm text-slate-300 hover:text-white">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -785,7 +921,7 @@ function PostDetailModal({
           {/* Preview */}
           <div className="flex-1">
             <div className="aspect-[4/5] bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
-              <PostPreview url={post.previewUrl} alt={post.title} controls className="w-full h-full object-contain bg-black" iconClassName="w-20 h-20 text-slate-600" />
+              <PostPreview url={post.previewUrl} urls={post.previewUrls} alt={post.title} controls className="w-full h-full object-contain bg-black" iconClassName="w-20 h-20 text-slate-600" />
             </div>
           </div>
 
@@ -886,7 +1022,7 @@ function PostedTab({
             >
               {/* Preview */}
               <div className="aspect-video bg-slate-800 flex items-center justify-center overflow-hidden">
-                <PostPreview url={post.previewUrl} alt={post.title} iconClassName="w-12 h-12 text-slate-600" />
+                <PostPreview url={post.previewUrl} urls={post.previewUrls} alt={post.title} iconClassName="w-12 h-12 text-slate-600" />
               </div>
 
               {/* Content */}

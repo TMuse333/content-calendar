@@ -32,6 +32,7 @@ interface ReviewPost {
   caption?: string;
   cta?: string;
   previewUrl?: string;
+  previewUrls?: string[];
 }
 
 interface AccountInfo {
@@ -270,7 +271,7 @@ export default function ReviewPortalPage() {
                   {/* Preview Image */}
                   {post.previewUrl ? (
                     <div className="aspect-video bg-slate-800 relative">
-                      <PostPreview url={post.previewUrl} alt={post.title} controls className="w-full h-full object-contain bg-black" />
+                      <PostPreview url={post.previewUrl} urls={post.previewUrls} alt={post.title} controls className="w-full h-full object-contain bg-black" />
                       {!account.isPaid && (
                         <div className="absolute top-2 right-2 px-2 py-1 bg-black/70 text-amber-400 text-xs rounded">
                           Preview
@@ -408,7 +409,7 @@ export default function ReviewPortalPage() {
                 >
                   {post.previewUrl ? (
                     <div className="aspect-square bg-slate-800 relative">
-                      <PostPreview url={post.previewUrl} alt={post.title} />
+                      <PostPreview url={post.previewUrl} urls={post.previewUrls} alt={post.title} />
                       <div className="absolute top-2 right-2">
                         <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                       </div>
@@ -448,7 +449,7 @@ export default function ReviewPortalPage() {
                 >
                   {post.previewUrl ? (
                     <div className="aspect-square bg-slate-800">
-                      <PostPreview url={post.previewUrl} alt={post.title} className="w-full h-full object-cover opacity-80" />
+                      <PostPreview url={post.previewUrl} urls={post.previewUrls} alt={post.title} className="w-full h-full object-cover opacity-80" />
                     </div>
                   ) : (
                     <div className="aspect-square bg-slate-800 flex items-center justify-center">
