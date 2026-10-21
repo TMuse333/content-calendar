@@ -35,6 +35,7 @@ export function AppShell({ children }: AppShellProps) {
     pathname.startsWith("/auth") ||
     pathname.startsWith("/onboard") ||
     pathname.includes("/client-view") ||
+    pathname.endsWith("/questions") ||
     pathname.startsWith("/review")
   ) {
     return <>{children}</>;
