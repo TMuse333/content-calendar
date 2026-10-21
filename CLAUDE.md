@@ -32,3 +32,4 @@ Several Claude sessions may work on this repo at once. Each owns one area (see t
 - **Finished:** `Review` + `Result summary`. Merge to main only when Thomas has said to.
 - Work only on your own `task/CT-*` branch and your own area's files. Don't edit another session's in-flight files; if you must touch shared code (e.g. `src/lib/notion/*`), keep the change small and rebase on main first.
 - Board view: "Sessions (live)" on Claude Coding Tasks.
+- **Mission Control** (Thomas's steering page): https://www.notion.so/40008d8fd6028113adb4f20ec01723f7 — when you finish a task, get blocked, or learn a client signal (IG connected, link opened, answers in), rewrite your own row/section there and the "Updated … by <session>" footer. Keep "Needs you" to the top 3 things only Thomas can do. Summaries only; detail stays on the task board.
