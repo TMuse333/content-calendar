@@ -6,7 +6,7 @@
  * Rules (Spec: review portal):
  *  - Approve        → Post Status = "Approved"
  *  - Request changes → comment saved to the account's Feedback database, then
- *                      Post Status = "Drafting" (the Notion name for Draft)
+ *                      Post Status = "Draft"
  *  - Only Status and Feedback are written. Strategy fields are never touched.
  *  - Idempotent: repeating the same action (double-tap, retry) succeeds
  *    without a second write or a duplicate feedback row.
@@ -33,7 +33,7 @@ export type ReviewResult =
 
 const TARGET: Record<ReviewAction, PostStatus> = {
   approve: "Approved",
-  "request-changes": "Drafting",
+  "request-changes": "Draft",
 };
 
 export async function performReviewAction(

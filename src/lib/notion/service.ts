@@ -69,6 +69,32 @@ function extractUrl(prop: unknown): string | undefined {
   return p.url ?? undefined;
 }
 
+const MEDIA_EXT = /\.(mp4|mov|m4v|webm|jpe?g|png|gif|webp|avif)$/i;
+
+/**
+ * Preview can be a Files property (drag a video/image into Notion) or a URL.
+ * Returns the first file's URL. Notion-hosted file URLs are signed and expire
+ * after ~1 hour, which is fine because the app reads Notion live on each load.
+ * If the URL itself has no media extension but the file name does, the name's
+ * extension is added as a URL fragment so the UI knows to play it as video.
+ */
+export function extractFileOrUrl(prop: unknown): string | undefined {
+  if (!prop || typeof prop !== "object") return undefined;
+  const p = prop as {
+    url?: string;
+    files?: Array<{ name?: string; type?: string; file?: { url?: string }; external?: { url?: string } }>;
+  };
+  if (p.url) return p.url;
+  const first = p.files?.[0];
+  if (!first) return undefined;
+  const url = first.file?.url ?? first.external?.url;
+  if (!url) return undefined;
+  const pathname = url.split("?")[0].split("#")[0];
+  const nameExt = first.name?.match(MEDIA_EXT)?.[0];
+  if (!MEDIA_EXT.test(pathname) && nameExt) return `${url}#preview${nameExt.toLowerCase()}`;
+  return url;
+}
+
 function extractRelation(prop: unknown): string[] {
   if (!prop || typeof prop !== "object") return [];
   const p = prop as { relation?: Array<{ id: string }> };
@@ -182,7 +208,7 @@ function parsePost(page: unknown): NotionPost {
     videoFormat: extractSelect(props["Video format"]),
     caption: extractRichText(props["Caption"]),
     cta: extractRichText(props["CTA"]),
-    previewUrl: extractUrl(props["Preview"]),
+    previewUrl: extractFileOrUrl(props["Preview"]),
     successMetric: extractSelect(props["Success metric"]),
     answerCheck: extractCheckbox(props["Answer check"]),
     igPostLink: extractUrl(props["IG post link"]),
@@ -369,7 +395,7 @@ export async function getPostsSummary(config: NotionConfig): Promise<PostsSummar
     total: posts.length,
     byStatus: {
       "Idea": 0,
-      "Drafting": 0,
+      "Draft": 0,
       "Ready for review": 0,
       "Approved": 0,
       "Scheduled": 0,

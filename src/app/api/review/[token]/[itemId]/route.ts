@@ -6,7 +6,7 @@
  * Updates post status in Notion:
  * - "approve" → status becomes "Approved"
  * - "request-changes" → comment saved to the account's Feedback database,
- *   status becomes "Drafting"
+ *   status becomes "Draft"
  */
 
 import { NextRequest, NextResponse } from "next/server";

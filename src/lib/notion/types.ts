@@ -52,7 +52,7 @@ export type PostType =
 // =============================================================================
 export type PostStatus =
   | "Idea"
-  | "Drafting"
+  | "Draft"
   | "Ready for review"
   | "Approved"
   | "Scheduled"
@@ -90,7 +90,7 @@ export type Round =
 // =============================================================================
 export type ReportStatus =
   | "Due"
-  | "Drafting"
+  | "Draft"
   | "Sent";
 
 // =============================================================================

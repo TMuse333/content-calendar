@@ -43,7 +43,7 @@ describe("performReviewAction — approve", () => {
 });
 
 describe("performReviewAction — request changes", () => {
-  it("saves the comment to Feedback, then sets Status = Drafting", async () => {
+  it("saves the comment to Feedback, then sets Status = Draft", async () => {
     const order: string[] = [];
     deps.createPostFeedback.mockImplementation(async () => {
       order.push("feedback");
@@ -56,13 +56,13 @@ describe("performReviewAction — request changes", () => {
 
     const r = await performReviewAction(deps, config, "post-1", "request-changes", "  Use the blue cover photo  ");
 
-    expect(r).toMatchObject({ ok: true, newStatus: "Drafting", feedbackId: "fb-1" });
+    expect(r).toMatchObject({ ok: true, newStatus: "Draft", feedbackId: "fb-1" });
     expect(deps.createPostFeedback).toHaveBeenCalledWith(config, {
       postId: "post-1",
       postTitle: "Fall market explainer",
       comment: "Use the blue cover photo",
     });
-    expect(deps.updatePostStatus).toHaveBeenCalledWith(config, "post-1", "Drafting");
+    expect(deps.updatePostStatus).toHaveBeenCalledWith(config, "post-1", "Draft");
     expect(order).toEqual(["feedback", "status"]);
   });
 
@@ -73,7 +73,7 @@ describe("performReviewAction — request changes", () => {
   });
 
   it("is idempotent: a double-tap does not create a second feedback row", async () => {
-    deps.getPostById.mockResolvedValue(post("Drafting"));
+    deps.getPostById.mockResolvedValue(post("Draft"));
     const r = await performReviewAction(deps, config, "post-1", "request-changes", "again");
     expect(r).toMatchObject({ ok: true, alreadyDone: true });
     expect(deps.createPostFeedback).not.toHaveBeenCalled();
