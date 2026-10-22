@@ -1,3 +1,4 @@
+import { graphHost } from "@/lib/platforms/ig-graph";
 /**
  * Transcribe Post API
  * POST /api/accounts/[id]/posts/[postId]/transcribe
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Fetch fresh media URL from Instagram
     const mediaRes = await fetch(
-      `https://graph.facebook.com/${post.instagramId}?fields=media_url&access_token=${instagram.accessToken}`
+      `${graphHost(instagram.apiHost)}/${post.instagramId}?fields=media_url&access_token=${instagram.accessToken}`
     );
     const mediaData = await mediaRes.json();
 

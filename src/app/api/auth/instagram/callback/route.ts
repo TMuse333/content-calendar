@@ -264,6 +264,9 @@ export async function GET(request: NextRequest) {
       redirectPath = `/onboard/${accountId}?instagram=connected&username=${instagramAccount.username}`;
     } else if (source === "client-view") {
       redirectPath = `/account/${accountId}/client-view?instagram=connected&username=${instagramAccount.username}`;
+    } else if (!existingAccount?.notion?.postsDataSourceId) {
+      // No Notion content yet: the client view would show "Oops! Account not configured".
+      redirectPath = `/connected?status=ok&username=${encodeURIComponent(instagramAccount.username ?? "")}`;
     } else {
       redirectPath = `/account/${accountId}/client-view?instagram=connected&username=${instagramAccount.username}`;
     }

@@ -38,6 +38,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const status = await checkInstagramConnection({
       instagramId: instagram.userId,
       accessToken: instagram.accessToken,
+        apiHost: instagram.apiHost,
     });
 
     return NextResponse.json(status);

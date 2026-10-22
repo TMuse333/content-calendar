@@ -50,6 +50,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       credentials: {
         instagramId: instagram.userId,
         accessToken: instagram.accessToken,
+        apiHost: instagram.apiHost,
       },
     });
 

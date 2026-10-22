@@ -64,6 +64,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       credentials: {
         instagramId: instagram.userId,
         accessToken: instagram.accessToken,
+        apiHost: instagram.apiHost,
       },
       limit,
     });

@@ -58,6 +58,8 @@ export interface Campaign {
 // Platform connection (Instagram, etc.)
 export interface InstagramConnection {
   connected: boolean;
+  /** "instagram" = Business Login for Instagram (graph.instagram.com); missing = Facebook Login. */
+  apiHost?: "facebook" | "instagram";
   accessToken?: string;          // Page access token (long-lived)
   userId?: string;               // Instagram Business Account ID
   username?: string;             // Instagram username

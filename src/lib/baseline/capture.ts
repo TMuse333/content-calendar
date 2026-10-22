@@ -16,8 +16,8 @@
  */
 
 import type { Baseline } from "@/lib/types/results";
+import { graphHost } from "@/lib/platforms/ig-graph";
 
-const GRAPH = "https://graph.facebook.com/v21.0";
 const INSIGHT_METRICS = [
   "reach",
   "profile_views",
@@ -53,8 +53,10 @@ export async function fetchInstagramBaseline(
   accessToken: string,
   userId: string,
   fetchImpl: FetchLike = fetch as unknown as FetchLike,
-  now: number = Date.now()
+  now: number = Date.now(),
+  apiHost?: string | null
 ): Promise<InstagramBaselineResult> {
+  const GRAPH = `${graphHost(apiHost)}/v21.0`;
   try {
     const until = Math.floor(now / 1000);
     const since = until - 30 * 24 * 60 * 60;
@@ -173,7 +175,7 @@ export async function captureBaseline(db: BaselineDb, opts: CaptureOptions): Pro
     }
   }
 
-  const ig = (account.platforms as { instagram?: { connected?: boolean; accessToken?: string; userId?: string } } | undefined)
+  const ig = (account.platforms as { instagram?: { connected?: boolean; accessToken?: string; userId?: string; apiHost?: string } } | undefined)
     ?.instagram;
   if (!ig?.connected || !ig.accessToken || !ig.userId) {
     const error = "Instagram is not connected for this account";
@@ -181,7 +183,7 @@ export async function captureBaseline(db: BaselineDb, opts: CaptureOptions): Pro
     return { status: "failed", error };
   }
 
-  const result = await fetchInstagramBaseline(ig.accessToken, ig.userId, opts.fetchImpl, now.getTime());
+  const result = await fetchInstagramBaseline(ig.accessToken, ig.userId, opts.fetchImpl, now.getTime(), ig.apiHost);
   if (!result.ok) {
     await recordStatus({ state: "failed", error: result.error });
     return { status: "failed", error: result.error };
