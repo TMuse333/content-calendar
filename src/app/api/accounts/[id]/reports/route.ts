@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 import type { MonthlyReport, Baseline, Outcome } from "@/lib/types/results";
 import type { Post } from "@/lib/types/post";
+import { graphHost } from "@/lib/platforms/ig-graph";
 
 // Helper to get month boundaries
 function getMonthBoundaries(year: number, month: number) {
@@ -23,10 +24,11 @@ async function fetchInstagramInsights(
   accessToken: string,
   userId: string,
   since: Date,
-  until: Date
+  until: Date,
+  apiHost?: string | null
 ): Promise<{ profileVisits: number; reach: number; websiteClicks: number } | null> {
   try {
-    const insightsUrl = new URL(`https://graph.facebook.com/v21.0/${userId}/insights`);
+    const insightsUrl = new URL(`${graphHost(apiHost)}/v21.0/${userId}/insights`);
     insightsUrl.searchParams.set("metric", "reach,profile_views,website_clicks");
     insightsUrl.searchParams.set("period", "day");
     insightsUrl.searchParams.set("metric_type", "total_value");
@@ -203,7 +205,8 @@ export async function POST(
         account.platforms.instagram.accessToken,
         account.platforms.instagram.userId,
         start,
-        end
+        end,
+        account.platforms.instagram.apiHost
       );
     }
 

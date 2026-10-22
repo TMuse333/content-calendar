@@ -1,3 +1,4 @@
+import { graphHost } from "@/lib/platforms/ig-graph";
 // Cron Job: Publish Scheduled Carousels
 //
 // This endpoint should be called periodically (e.g., every 5 minutes)
@@ -15,6 +16,7 @@ interface InstagramPlatform {
   connected: boolean;
   accessToken: string;
   userId: string;
+  apiHost?: string;
 }
 
 interface Account {
@@ -37,13 +39,14 @@ async function createCarouselContainer(
   accessToken: string,
   userId: string,
   imageUrls: string[],
-  caption: string
+  caption: string,
+  apiHost?: string
 ): Promise<string> {
   const childContainerIds: string[] = [];
 
   for (const imageUrl of imageUrls) {
     const response = await fetch(
-      `https://graph.facebook.com/v21.0/${userId}/media`,
+      `${graphHost(apiHost)}/v21.0/${userId}/media`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,7 +66,7 @@ async function createCarouselContainer(
   }
 
   const carouselResponse = await fetch(
-    `https://graph.facebook.com/v21.0/${userId}/media`,
+    `${graphHost(apiHost)}/v21.0/${userId}/media`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -87,10 +90,11 @@ async function createCarouselContainer(
 async function publishCarousel(
   accessToken: string,
   userId: string,
-  containerId: string
+  containerId: string,
+  apiHost?: string
 ): Promise<string> {
   const response = await fetch(
-    `https://graph.facebook.com/v21.0/${userId}/media_publish`,
+    `${graphHost(apiHost)}/v21.0/${userId}/media_publish`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -132,7 +136,8 @@ async function processCarousel(
       instagram.accessToken,
       instagram.userId,
       carousel.imageUrls,
-      carousel.caption
+      carousel.caption,
+      instagram.apiHost
     );
 
     // Wait for processing
@@ -141,7 +146,8 @@ async function processCarousel(
     const mediaId = await publishCarousel(
       instagram.accessToken,
       instagram.userId,
-      containerId
+      containerId,
+      instagram.apiHost
     );
 
     // Mark as published

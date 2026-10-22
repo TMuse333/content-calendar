@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
+import { refreshIgLoginToken } from "@/lib/platforms/ig-login";
 
 interface RefreshResult {
   accountId: string;
@@ -49,7 +50,10 @@ export async function POST(request: NextRequest) {
     // Find accounts to refresh
     const query: Record<string, unknown> = {
       "platforms.instagram.connected": true,
-      "platforms.instagram.userAccessToken": { $exists: true },
+      $or: [
+        { "platforms.instagram.userAccessToken": { $exists: true } },
+        { "platforms.instagram.apiHost": "instagram" },
+      ],
     };
 
     if (specificAccountId) {
@@ -77,6 +81,31 @@ export async function POST(request: NextRequest) {
 
     for (const account of accounts) {
       const instagram = account.platforms?.instagram;
+
+      // Instagram Login connections refresh on graph.instagram.com.
+      if (instagram?.apiHost === "instagram" && instagram.accessToken) {
+        try {
+          const r = await refreshIgLoginToken(instagram.accessToken);
+          const now = new Date();
+          const newExpiresAt = new Date(now.getTime() + r.expiresIn * 1000);
+          await db.collection("accounts").updateOne(
+            { id: account.id },
+            {
+              $set: {
+                "platforms.instagram.accessToken": r.accessToken,
+                "platforms.instagram.expiresAt": newExpiresAt,
+                "platforms.instagram.lastRefreshedAt": now,
+                updatedAt: now,
+              },
+            }
+          );
+          results.push({ accountId: account.id, success: true, newExpiresAt });
+        } catch (err) {
+          results.push({ accountId: account.id, success: false, error: err instanceof Error ? err.message : "Unknown error" });
+        }
+        continue;
+      }
+
       if (!instagram?.userAccessToken) continue;
 
       try {

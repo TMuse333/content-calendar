@@ -1,3 +1,4 @@
+import { graphHost } from "./ig-graph";
 // Instagram/Meta API types and helpers
 // Ported from video-system
 
@@ -66,13 +67,15 @@ export interface PostWithInsights {
 export interface InstagramCredentials {
   instagramId: string;
   accessToken: string;
+  /** "instagram" for Instagram Login connections; default Facebook Graph. */
+  apiHost?: string | null;
 }
 
 // Helper to get credentials (from params or env vars)
 export function getInstagramCredentials(creds?: InstagramCredentials) {
   // Use provided credentials if available
   if (creds?.instagramId && creds?.accessToken) {
-    return { valid: true as const, instagramId: creds.instagramId, accessToken: creds.accessToken };
+    return { valid: true as const, instagramId: creds.instagramId, accessToken: creds.accessToken, apiHost: creds.apiHost ?? null };
   }
 
   // Fall back to env vars
@@ -83,7 +86,7 @@ export function getInstagramCredentials(creds?: InstagramCredentials) {
     return { valid: false as const, error: "Missing Instagram credentials" };
   }
 
-  return { valid: true as const, instagramId, accessToken };
+  return { valid: true as const, instagramId, accessToken, apiHost: null as string | null };
 }
 
 // Check connection status
@@ -95,7 +98,7 @@ export async function checkInstagramConnection(credentials?: InstagramCredential
 
   try {
     const res = await fetch(
-      `https://graph.facebook.com/${creds.instagramId}?fields=id,username&access_token=${creds.accessToken}`
+      `${graphHost(creds.apiHost)}/${creds.instagramId}?fields=id,username&access_token=${creds.accessToken}`
     );
     const data = await res.json();
 
@@ -146,7 +149,7 @@ export async function uploadToInstagram(request: UploadRequest, credentials?: In
     }
 
     const containerRes = await fetch(
-      `https://graph.facebook.com/v21.0/${instagramId}/media?access_token=${accessToken}`,
+      `${graphHost(creds.apiHost)}/v21.0/${instagramId}/media?access_token=${accessToken}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -171,7 +174,7 @@ export async function uploadToInstagram(request: UploadRequest, credentials?: In
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
         const statusRes = await fetch(
-          `https://graph.facebook.com/v21.0/${containerData.id}?fields=status_code&access_token=${accessToken}`
+          `${graphHost(creds.apiHost)}/v21.0/${containerData.id}?fields=status_code&access_token=${accessToken}`
         );
         const statusData = await statusRes.json();
         statusCode = statusData.status_code || "IN_PROGRESS";
@@ -198,7 +201,7 @@ export async function uploadToInstagram(request: UploadRequest, credentials?: In
     }
 
     const publishRes = await fetch(
-      `https://graph.facebook.com/v21.0/${instagramId}/media_publish?access_token=${accessToken}`,
+      `${graphHost(creds.apiHost)}/v21.0/${instagramId}/media_publish?access_token=${accessToken}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -244,7 +247,7 @@ export async function fetchInstagramPosts(options?: {
 
   try {
     const posts: InstagramPost[] = [];
-    let nextUrl: string | null = `https://graph.facebook.com/${instagramId}/media?fields=id,caption,media_type,thumbnail_url,media_url,timestamp,like_count,comments_count&access_token=${accessToken}&limit=${limit}`;
+    let nextUrl: string | null = `${graphHost(creds.apiHost)}/${instagramId}/media?fields=id,caption,media_type,thumbnail_url,media_url,timestamp,like_count,comments_count&access_token=${accessToken}&limit=${limit}`;
 
     while (nextUrl) {
       const res: Response = await fetch(nextUrl);
@@ -316,7 +319,7 @@ export async function fetchPostInsights(options?: {
   try {
     // Fetch posts with media_product_type to determine metrics
     const postsRes = await fetch(
-      `https://graph.facebook.com/${instagramId}/media?fields=id,caption,media_type,media_product_type,thumbnail_url,media_url,timestamp,like_count,comments_count&access_token=${accessToken}&limit=${limit}`
+      `${graphHost(creds.apiHost)}/${instagramId}/media?fields=id,caption,media_type,media_product_type,thumbnail_url,media_url,timestamp,like_count,comments_count&access_token=${accessToken}&limit=${limit}`
     );
     const postsData = await postsRes.json();
 
@@ -352,7 +355,7 @@ export async function fetchPostInsights(options?: {
             : "impressions,reach,saved";
 
           const insightsRes = await fetch(
-            `https://graph.facebook.com/${post.id}/insights?metric=${metrics}&access_token=${accessToken}`
+            `${graphHost(creds.apiHost)}/${post.id}/insights?metric=${metrics}&access_token=${accessToken}`
           );
           const insightsData = await insightsRes.json();
 
