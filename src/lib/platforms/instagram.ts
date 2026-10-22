@@ -298,6 +298,41 @@ export async function fetchInstagramPosts(options?: {
 }
 
 // Fetch insights for posts
+export const REEL_METRICS = "reach,views,likes,comments,shares,saved";
+export const FEED_METRICS = "reach,views,saved,shares";
+
+type InsightsFetch = (url: string) => Promise<{ json: () => Promise<unknown> }>;
+
+/**
+ * Fetch one media item's insights, trying each metric set in order until one
+ * succeeds. Instagram rejects the whole request if any metric is unsupported,
+ * so a smaller fallback set keeps reach/saves flowing. Errors are logged
+ * instead of silently turning into zeros.
+ */
+export async function fetchMediaInsights(
+  host: string,
+  mediaId: string,
+  accessToken: string,
+  metricSets: string[],
+  fetchImpl: InsightsFetch = fetch as unknown as InsightsFetch
+): Promise<Record<string, number>> {
+  for (const metrics of metricSets) {
+    const data = (await (
+      await fetchImpl(`${host}/${mediaId}/insights?metric=${metrics}&access_token=${accessToken}`)
+    ).json()) as {
+      data?: { name: string; values?: { value?: number }[]; total_value?: { value?: number } }[];
+      error?: { message?: string };
+    };
+    if (Array.isArray(data.data)) {
+      const map: Record<string, number> = {};
+      for (const m of data.data) map[m.name] = m.total_value?.value ?? m.values?.[0]?.value ?? 0;
+      return map;
+    }
+    console.warn(`[instagram:insights] ${mediaId} metrics=${metrics} failed: ${data.error?.message ?? "no data"}`);
+  }
+  return {};
+}
+
 export async function fetchPostInsights(options?: {
   since?: Date;
   until?: Date;
@@ -348,23 +383,19 @@ export async function fetchPostInsights(options?: {
         comments_count?: number;
       }) => {
         try {
-          // Different metrics for Reels vs Images/Videos
+          // Different metrics for Reels vs Images/Carousels.
+          // "impressions" was retired by Instagram; asking for it makes the
+          // whole request fail (and every metric used to fall back to 0).
           const isReel = post.media_product_type === "REELS";
-          const metrics = isReel
-            ? "reach,views,likes,comments,shares,saved"
-            : "impressions,reach,saved";
-
-          const insightsRes = await fetch(
-            `${graphHost(creds.apiHost)}/${post.id}/insights?metric=${metrics}&access_token=${accessToken}`
+          const metricSets = isReel
+            ? [REEL_METRICS, "reach,views,saved"]
+            : [FEED_METRICS, "reach,saved"];
+          const metricsMap = await fetchMediaInsights(
+            graphHost(creds.apiHost),
+            post.id,
+            accessToken,
+            metricSets
           );
-          const insightsData = await insightsRes.json();
-
-          const metricsMap: Record<string, number> = {};
-          if (Array.isArray(insightsData.data)) {
-            insightsData.data.forEach((m: { name: string; values?: { value?: number }[] }) => {
-              metricsMap[m.name] = m.values?.[0]?.value ?? 0;
-            });
-          }
 
           // Get individual metrics
           const likes = isReel ? (metricsMap.likes ?? 0) : (post.like_count ?? 0);
