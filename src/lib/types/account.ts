@@ -161,6 +161,10 @@ export interface StrategyAccount {
   handle?: string;                // Social handle (e.g., "@gregcaseley")
   email?: string;
 
+  // Niche targeting
+  niches?: string[];              // ["first-time buyers", "luxury sellers", "investors"]
+  primaryNiche?: string;          // Main focus
+
   // Notion integration - where strategy lives
   notion?: NotionConfig;
 
