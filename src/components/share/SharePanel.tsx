@@ -176,13 +176,14 @@ export function SharePanel({
 
             <div>
               <p className="text-sm font-medium text-slate-300 mb-2">Questions</p>
-              <div className="grid grid-cols-4 gap-2 text-sm">
+              <div className="grid grid-cols-3 gap-2 text-sm">
                 {(
                   [
                     ["", "None"],
                     ["content", "Content"],
                     ["strategy", "Strategy"],
                     ["clients", "Client wins"],
+                    ["carousels", "Carousel Qs"],
                   ] as const
                 ).map(([v, label]) => (
                   <button

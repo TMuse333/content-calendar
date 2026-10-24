@@ -15,7 +15,7 @@ interface Submission {
   createdAt: string;
 }
 
-const SET_ORDER: QuestionSetId[] = ["clients", "content", "strategy"];
+const SET_ORDER: QuestionSetId[] = ["carousels", "clients", "content", "strategy"];
 
 export function QuestionsTab({ accountId }: { accountId: string }) {
   const [submissions, setSubmissions] = useState<Submission[]>([]);

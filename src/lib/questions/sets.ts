@@ -20,7 +20,7 @@ export interface QuestionSet {
   questions: Question[];
 }
 
-export type QuestionSetId = "content" | "strategy" | "clients";
+export type QuestionSetId = "content" | "strategy" | "clients" | "carousels";
 
 export const SELLER_QUESTIONS: Question[] = [
   { id: "top-questions", prompt: "What are the top 3 questions sellers asked you this year?", hint: "Exactly how they asked them is perfect.", notionProperty: "Top 3 seller questions" },
@@ -53,6 +53,22 @@ export const CLIENT_WIN_QUESTIONS: Question[] = [
   { id: "win-tag-ok", prompt: "Are any of these clients OK being tagged or named in a post?", hint: "If unsure, we keep them anonymous.", notionProperty: "Client win: tag OK" },
 ];
 
+/**
+ * "carousels": per-carousel confirmations before the current batch goes live
+ * (from "Questions for Greg", Oct 24). Dates follow the Notion post dates.
+ */
+export const CAROUSEL_QUESTIONS: Question[] = [
+  { id: "timing-competition", prompt: "Is it true on PEI that there's less competition from other listings in winter?", hint: "Fall/winter carousel (posts Nov 6).", notionProperty: "Carousel: winter competition" },
+  { id: "timing-before-spring", prompt: "Do you advise sellers to list before the spring listings arrive?", hint: "Fall/winter carousel.", notionProperty: "Carousel: list before spring" },
+  { id: "downsize-sell-first", prompt: "For most downsizers, do you recommend \"sell first, with a later closing\"?", hint: "Sell first or buy first carousel (posts Oct 30).", notionProperty: "Carousel: sell first" },
+  { id: "downsize-walk-away", prompt: "Is \"know what you'll walk away with, then shop\" how you'd put it?", hint: "Sell first or buy first carousel.", notionProperty: "Carousel: walk away" },
+  { id: "list-steps", prompt: "Is this your order of steps after \"let's list\": prep, photos and video, go live, showings, offers?", hint: "After \"let's list\" carousel (posts Nov 1).", notionProperty: "Carousel: listing steps" },
+  { id: "list-offers", prompt: "Do you handle offers as accept, counter or decline — or would you add anything?", hint: "After \"let's list\" carousel.", notionProperty: "Carousel: offers" },
+  { id: "price-three-things", prompt: "Your price comes from three things: recent sold prices nearby, condition, and a first-two-weeks plan. Is that right?", hint: "Pricing carousel (posts Nov 8).", notionProperty: "Carousel: price inputs" },
+  { id: "price-two-weeks", prompt: "Are you comfortable saying a new listing gets the most attention in its first two weeks?", hint: "Pricing carousel.", notionProperty: "Carousel: first two weeks" },
+  { id: "costs-ranges", prompt: "Optional: if you want dollar ranges for HST, lawyer, mortgage discharge and movers, send the numbers you're comfortable with.", hint: "Selling costs carousel (posts Oct 28). Right now the slides only show the 5% commission example.", notionProperty: "Carousel: cost ranges" },
+];
+
 export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
   content: {
     id: "content",
@@ -71,6 +87,12 @@ export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
     label: "Your recent client wins",
     intro: "Your best post this year was a client congratulations. A few questions so we can turn wins like that into posts. No names needed unless you want them. Short answers or a voice note back are fine.",
     questions: CLIENT_WIN_QUESTIONS,
+  },
+  carousels: {
+    id: "carousels",
+    label: "Carousel confirmations",
+    intro: "Quick confirmations before these carousels go live — a yes/no plus a line is perfect, and skip any you want.",
+    questions: CAROUSEL_QUESTIONS,
   },
 };
 
