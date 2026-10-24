@@ -1,6 +1,6 @@
 /**
  * Admin: create / list share links for a client.
- * POST { postIds: string[], questionSet: "content"|"strategy"|null, message?, expiresInDays? }
+ * POST { postIds: string[], questionSet: QuestionSetId ("content"|"strategy"|"clients") | null, message?, expiresInDays? }
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountById } from "@/lib/mongodb/accounts";

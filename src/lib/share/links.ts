@@ -7,7 +7,7 @@
  * be revoked.
  */
 import { randomBytes } from "crypto";
-import type { QuestionSetId } from "@/lib/questions/sets";
+import { isQuestionSetId, type QuestionSetId } from "@/lib/questions/sets";
 
 export interface ShareLink {
   code: string;
@@ -40,7 +40,7 @@ export function buildShareLink(input: CreateInput, now = new Date()): ShareLink 
   const postIds = Array.isArray(input.postIds)
     ? [...new Set(input.postIds.filter((p): p is string => typeof p === "string" && p.length > 0))].slice(0, 20)
     : [];
-  const questionSet = input.questionSet === "content" || input.questionSet === "strategy" ? input.questionSet : null;
+  const questionSet = isQuestionSetId(input.questionSet) ? input.questionSet : null;
   if (postIds.length === 0 && !questionSet) {
     return { error: "Pick at least one post or a question set." };
   }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Copy, Eye, Loader2, X } from "lucide-react";
 import { describeOpens } from "@/lib/share/opens";
+import type { QuestionSetId } from "@/lib/questions/sets";
 
 export interface ShareablePost {
   id: string;
@@ -36,7 +37,7 @@ export function SharePanel({
   const [selected, setSelected] = useState<string[]>(
     posts.filter((p) => p.slides > 0 && p.status !== "Idea").map((p) => p.id)
   );
-  const [questionSet, setQuestionSet] = useState<"" | "content" | "strategy">("content");
+  const [questionSet, setQuestionSet] = useState<"" | QuestionSetId>("content");
   const [message, setMessage] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,12 +142,13 @@ export function SharePanel({
 
             <div>
               <p className="text-sm font-medium text-slate-300 mb-2">Questions</p>
-              <div className="grid grid-cols-3 gap-2 text-sm">
+              <div className="grid grid-cols-4 gap-2 text-sm">
                 {(
                   [
                     ["", "None"],
                     ["content", "Content"],
                     ["strategy", "Strategy"],
+                    ["clients", "Client wins"],
                   ] as const
                 ).map(([v, label]) => (
                   <button

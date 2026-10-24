@@ -20,7 +20,7 @@ export interface QuestionSet {
   questions: Question[];
 }
 
-export type QuestionSetId = "content" | "strategy";
+export type QuestionSetId = "content" | "strategy" | "clients";
 
 export const SELLER_QUESTIONS: Question[] = [
   { id: "top-questions", prompt: "What are the top 3 questions sellers asked you this year?", hint: "Exactly how they asked them is perfect.", notionProperty: "Top 3 seller questions" },
@@ -41,6 +41,18 @@ export const STRATEGY_QUESTIONS: Question[] = [
   { id: "never-post", prompt: "Anything we should never post? (topics, tone, competitors)" },
 ];
 
+/**
+ * "clients": past-client wins. Client-win posts are the best-performing format
+ * on the accounts measured so far; these answers become "client win + lesson" posts.
+ */
+export const CLIENT_WIN_QUESTIONS: Question[] = [
+  { id: "win-who", prompt: "Think of a recent client you were proud to help. Who were they, roughly, and what were they trying to do?", hint: "First names or 'a couple downsizing from Kensington' is plenty.", notionProperty: "Client win: who" },
+  { id: "win-stuck", prompt: "What were they stuck on or worried about before they called you?", hint: "Price? Timing? Where to go next? A past bad experience?", notionProperty: "Client win: stuck on" },
+  { id: "win-difference", prompt: "What did you do that made the difference?", hint: "The one thing you did that another agent might not have.", notionProperty: "Client win: what made the difference" },
+  { id: "win-others", prompt: "Anyone else from this year with a story like that?", hint: "Just a name or two and one line each.", notionProperty: "Client win: others" },
+  { id: "win-tag-ok", prompt: "Are any of these clients OK being tagged or named in a post?", hint: "If unsure, we keep them anonymous.", notionProperty: "Client win: tag OK" },
+];
+
 export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
   content: {
     id: "content",
@@ -54,10 +66,16 @@ export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
     intro: "These shape what we post for you and who it attracts. Short answers are fine, and skip any you want.",
     questions: STRATEGY_QUESTIONS,
   },
+  clients: {
+    id: "clients",
+    label: "Your recent client wins",
+    intro: "Your best post this year was a client congratulations. A few questions so we can turn wins like that into posts. No names needed unless you want them. Short answers or a voice note back are fine.",
+    questions: CLIENT_WIN_QUESTIONS,
+  },
 };
 
 export function isQuestionSetId(v: unknown): v is QuestionSetId {
-  return v === "content" || v === "strategy";
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(QUESTION_SETS, v);
 }
 
 /** Default set for the standalone /questions page. */
