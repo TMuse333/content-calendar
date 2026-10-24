@@ -43,3 +43,11 @@ describe("codes and comments", () => {
     expect(reactionComment("Greg Caseley", "change", "Swap photo")).toBe("Greg (share link): ✏️ Change requested — Swap photo");
   });
 });
+
+describe("buildShareLink question sets", () => {
+  it("accepts the clients set with no posts", () => {
+    const l = buildShareLink({ accountId: "g", postIds: [], questionSet: "clients" }, new Date("2026-10-24T00:00:00Z"));
+    expect("error" in l).toBe(false);
+    if (!("error" in l)) expect(l.questionSet).toBe("clients");
+  });
+});

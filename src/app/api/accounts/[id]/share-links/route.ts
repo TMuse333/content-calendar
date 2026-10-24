@@ -1,10 +1,10 @@
 /**
  * Admin: create / list share links for a client.
- * POST { postIds: string[], questionSet: "content"|"strategy"|null, message?, expiresInDays? }
+ * POST { postIds: string[], questionSet: QuestionSetId ("content"|"strategy"|"clients") | null, message?, expiresInDays? }
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountById } from "@/lib/mongodb/accounts";
-import { insertShareLink, listShareLinks, revokeShareLink } from "@/lib/mongodb/share-links";
+import { insertShareLink, listShareLinks, listShareReactions, revokeShareLink } from "@/lib/mongodb/share-links";
 import { buildShareLink } from "@/lib/share/links";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +16,12 @@ function baseUrl(req: NextRequest) {
 
 export async function GET(req: NextRequest, { params }: Params) {
   const { id } = await params;
-  const links = await listShareLinks(id);
-  return NextResponse.json({ links: links.map((l) => ({ ...l, url: `${baseUrl(req)}/s/${l.code}` })) });
+  const [links, reactions] = await Promise.all([listShareLinks(id), listShareReactions(id)]);
+  return NextResponse.json({
+    links: links.map((l) => ({ ...l, url: `${baseUrl(req)}/s/${l.code}` })),
+    /** Client taps (👍 / ✏️ + comment) across all links, newest first. */
+    reactions,
+  });
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
