@@ -16,6 +16,7 @@ export function PostStep({
   onReacted,
   onNext,
   showNext = true,
+  sandbox = false,
 }: {
   post: SharePost;
   code: string;
@@ -26,12 +27,19 @@ export function PostStep({
   onNext: () => void;
   /** List mode renders no Next button and doesn't auto-advance. */
   showNext?: boolean;
+  /** Sandbox (dev-only walkthrough): record locally, never hit the API. */
+  sandbox?: boolean;
 }) {
   const [mode, setMode] = useState<"idle" | "change" | "sending">("idle");
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const send = async (reaction: Reaction) => {
+    if (sandbox) {
+      onReacted(post.id, reaction);
+      onNext();
+      return;
+    }
     setMode("sending");
     setError(null);
     try {

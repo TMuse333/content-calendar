@@ -34,15 +34,22 @@ export default function SharePage() {
   const draftKey = `share-draft:${code}`;
   const reactionsKey = `share-reactions:${code}`;
 
+  // Dev-only sandbox: click through everything, save nothing (?sandbox=1).
+  const [sandbox, setSandbox] = useState(false);
+
   useEffect(() => {
-    const preview = new URLSearchParams(window.location.search).get("preview") === "1";
-    fetch(`/api/share/${code}${preview ? "?preview=1" : ""}`)
+    const qp = new URLSearchParams(window.location.search);
+    const preview = qp.get("preview") === "1";
+    const sandboxed = process.env.NODE_ENV === "development" && qp.get("sandbox") === "1";
+    setSandbox(sandboxed);
+    fetch(`/api/share/${code}${preview || sandboxed ? "?preview=1" : ""}`)
       .then(async (r) => {
         const j = await r.json();
         if (!r.ok) throw new Error(j.error);
         setData(j);
       })
       .catch((e) => setLoadError(e.message || "This link isn't working."));
+    if (sandboxed) return; // fresh run every time, no saved progress
     try {
       const savedAnswers = localStorage.getItem(draftKey);
       if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
@@ -62,6 +69,7 @@ export default function SharePage() {
   const setAnswer = (id: string, v: string) => {
     const next = { ...answers, [id]: v };
     setAnswers(next);
+    if (sandbox) return;
     try {
       localStorage.setItem(draftKey, JSON.stringify(next));
     } catch {
@@ -72,6 +80,7 @@ export default function SharePage() {
   const recordReaction = (postId: string, reaction: Reaction) => {
     const next = { ...reactions, [postId]: reaction };
     setReactions(next);
+    if (sandbox) return;
     try {
       localStorage.setItem(reactionsKey, JSON.stringify(next));
     } catch {
@@ -82,6 +91,10 @@ export default function SharePage() {
   const answeredCount = questions.filter((q) => answers[q.id]?.trim()).length;
 
   const submitAnswers = async (): Promise<boolean> => {
+    if (sandbox) {
+      setAnswersSent(true);
+      return true;
+    }
     if (answeredCount === 0 || answersSent) return true;
     setSending(true);
     setAnswerError(null);
@@ -256,6 +269,11 @@ export default function SharePage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-xl mx-auto px-4 py-6 pb-16">
+        {sandbox && (
+          <p className="mb-4 text-center text-xs font-medium text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg py-1.5">
+            Sandbox — nothing you tap here is saved
+          </p>
+        )}
         {/* Top bar: back, progress, see-all */}
         {!isIntro && (
           <div className="mb-5">
@@ -312,6 +330,7 @@ export default function SharePage() {
             priorReaction={reactions[posts[postIndex].id]}
             onReacted={recordReaction}
             onNext={() => setStep((s) => Math.min(s + 1, doneStep))}
+            sandbox={sandbox}
           />
         )}
 
