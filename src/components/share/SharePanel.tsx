@@ -25,6 +25,14 @@ interface LinkRow {
   lastOpenedAt?: string;
 }
 
+interface ReactionRow {
+  code: string;
+  postId: string;
+  reaction: string;
+  comment?: string;
+  createdAt: string;
+}
+
 export function SharePanel({
   accountId,
   posts,
@@ -44,12 +52,18 @@ export function SharePanel({
   const [created, setCreated] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [links, setLinks] = useState<LinkRow[]>([]);
+  const [reactions, setReactions] = useState<ReactionRow[]>([]);
 
   const loadLinks = () =>
     fetch(`/api/accounts/${accountId}/share-links`)
       .then((r) => r.json())
-      .then((j) => setLinks(j.links ?? []))
+      .then((j) => {
+        setLinks(j.links ?? []);
+        setReactions(j.reactions ?? []);
+      })
       .catch(() => {});
+
+  const titleOf = (postId: string) => posts.find((p) => p.id === postId)?.title ?? "Post";
 
   useEffect(() => {
     loadLinks();
@@ -184,6 +198,24 @@ export function SharePanel({
               {creating && <Loader2 className="w-4 h-4 animate-spin" />} Create link
             </button>
           </>
+        )}
+
+        {reactions.length > 0 && (
+          <div className="border-t border-slate-800 pt-4">
+            <p className="text-xs uppercase tracking-wider text-slate-500 mb-2">Client feedback</p>
+            <div className="space-y-1.5">
+              {reactions.slice(0, 12).map((r, i) => (
+                <div key={`${r.code}-${r.postId}-${i}`} className="text-xs flex gap-2">
+                  <span>{r.reaction === "looks-good" ? "👍" : "✏️"}</span>
+                  <span className="flex-1">
+                    <span className="text-white">{titleOf(r.postId)}</span>
+                    {r.comment && <span className="text-slate-300"> — “{r.comment}”</span>}
+                    <span className="text-slate-500"> · {new Date(r.createdAt).toLocaleString()}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {links.length > 0 && (

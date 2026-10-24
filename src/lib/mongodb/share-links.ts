@@ -53,6 +53,25 @@ export async function saveShareReaction(doc: {
   await (await db()).collection("share_reactions").insertOne({ ...doc, createdAt: new Date() });
 }
 
+export interface ShareReaction {
+  code: string;
+  accountId: string;
+  postId: string;
+  reaction: string;
+  comment?: string;
+  createdAt: Date;
+}
+
+/** All reactions for an account, newest first (admin view of client feedback). */
+export async function listShareReactions(accountId: string, limit = 200): Promise<ShareReaction[]> {
+  return (await db())
+    .collection<ShareReaction>("share_reactions")
+    .find({ accountId }, { projection: { _id: 0 } })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .toArray();
+}
+
 export async function saveClientAnswers(doc: {
   accountId: string;
   setId: string;
