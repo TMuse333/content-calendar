@@ -23,6 +23,7 @@ import { ScheduledPostModal } from "./components/ScheduledPostModal";
 import { PublishedPostModal } from "./components/PublishedPostModal";
 import { MonthSummary } from "./components/MonthSummary";
 import { ProposalLinkModal } from "./components/ProposalLinkModal";
+import { NotionPostModal, type NotionCalendarPost } from "./components/NotionPostModal";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = [
@@ -48,6 +49,8 @@ export default function CalendarPage() {
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [posts, setPosts] = useState<Post[]>([]);
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
+  const [notionPosts, setNotionPosts] = useState<NotionCalendarPost[]>([]);
+  const [selectedNotionPost, setSelectedNotionPost] = useState<NotionCalendarPost | null>(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<CalendarFilter>("all");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -84,10 +87,30 @@ export default function CalendarPage() {
     }
   }, [currentAccount, currentMonth, currentYear]);
 
+  // Planned Notion posts (the content pipeline: Draft → Ready → Approved).
+  // Posted ones arrive via the Instagram sync above, so only planned here.
+  const fetchNotionPosts = useCallback(async () => {
+    if (!currentAccount) return;
+    try {
+      const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}`;
+      const res = await fetch(`/api/accounts/${currentAccount.id}/calendar?month=${monthStr}`);
+      const data = await res.json();
+      if (data?.posts) {
+        setNotionPosts(
+          (data.posts as (NotionCalendarPost & { source?: string })[]).filter(
+            (p) => p.source === "notion" && p.status !== "Posted"
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch Notion posts:", error);
+    }
+  }, [currentAccount, currentMonth, currentYear]);
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchPosts(), fetchScheduledPosts()]).finally(() => setLoading(false));
-  }, [fetchPosts, fetchScheduledPosts]);
+    Promise.all([fetchPosts(), fetchScheduledPosts(), fetchNotionPosts()]).finally(() => setLoading(false));
+  }, [fetchPosts, fetchScheduledPosts, fetchNotionPosts]);
 
   const handleSync = async () => {
     if (!currentAccount) return;
@@ -115,6 +138,16 @@ export default function CalendarPage() {
     if (filter === "posts") return [];
     return scheduledPosts.filter((post) => {
       const d = new Date(post.scheduledFor);
+      return d.getDate() === day && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+  };
+
+  const getNotionPostsForDay = (day: number) => {
+    if (filter === "posts") return [];
+    return notionPosts.filter((post) => {
+      const iso = post.scheduledFor || post.postedAt;
+      if (!iso) return false;
+      const d = new Date(iso);
       return d.getDate() === day && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
   };
@@ -273,6 +306,7 @@ export default function CalendarPage() {
           {calendarDays.map((day, index) => {
             const dayPosts = day !== null ? getPostsForDay(day) : [];
             const dayScheduledPosts = day !== null ? getScheduledPostsForDay(day) : [];
+            const dayNotionPosts = day !== null ? getNotionPostsForDay(day) : [];
 
             return (
               <div
@@ -316,6 +350,33 @@ export default function CalendarPage() {
                             <div className="flex-1 min-w-0 flex items-center justify-between gap-1">
                               <span className="text-xs text-slate-400 truncate">{post.caption?.slice(0, 12) || "Post"}{post.caption && post.caption.length > 12 ? "…" : ""}</span>
                               {reach > 0 && <span className={`text-[10px] font-medium flex-shrink-0 ${perf === "high" ? "text-emerald-400" : "text-slate-500"}`}>{reach >= 1000 ? `${(reach / 1000).toFixed(1)}k` : reach}</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {dayNotionPosts.map((post) => {
+                        const tone =
+                          post.status === "Approved"
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                            : post.status === "Ready for review"
+                            ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+                            : "border-blue-500/40 bg-blue-500/10 text-blue-400";
+                        return (
+                          <div
+                            key={post.id}
+                            onClick={() => setSelectedNotionPost(post)}
+                            className={`flex items-center gap-1.5 p-1 rounded border border-dashed transition-colors cursor-pointer hover:opacity-80 ${tone}`}
+                          >
+                            {post.previewUrl ? (
+                              <img src={post.previewUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center flex-shrink-0">
+                                <LayoutGrid className="w-3 h-3 text-slate-400" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs truncate block">{post.title?.slice(0, 18) || "Post"}</span>
+                              <span className="text-[10px] text-slate-500 truncate block">{post.status}</span>
                             </div>
                           </div>
                         );
@@ -367,6 +428,20 @@ export default function CalendarPage() {
       )}
       {showProposalModal && currentAccount && (
         <ProposalLinkModal accountId={currentAccount.id} onClose={() => setShowProposalModal(false)} />
+      )}
+      {selectedNotionPost && currentAccount && (
+        <NotionPostModal
+          post={selectedNotionPost}
+          accountId={currentAccount.id}
+          igUsername={
+            (currentAccount as { platforms?: { instagram?: { username?: string } } }).platforms?.instagram?.username
+          }
+          onClose={() => setSelectedNotionPost(null)}
+          onPublished={() => {
+            fetchNotionPosts();
+            fetchPosts();
+          }}
+        />
       )}
     </div>
   );
