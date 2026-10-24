@@ -14,7 +14,7 @@ export function buildInsightsPrompt(posts: Post[]): string {
   const postSummaries = posts.map((p, idx) => {
     const engRate =
       p.metrics.reach > 0
-        ? ((p.metrics.engagement / p.metrics.reach) * 100).toFixed(1)
+        ? (((p.metrics.engagement || 0) / p.metrics.reach) * 100).toFixed(1)
         : "0.0";
 
     const captionPreview = p.caption
@@ -29,7 +29,7 @@ export function buildInsightsPrompt(posts: Post[]): string {
   Message: ${p.classification?.coreMessage || "N/A"}
   Media: ${p.mediaType}
   Reach: ${p.metrics.reach.toLocaleString()}
-  Engagement: ${p.metrics.engagement}
+  Engagement: ${p.metrics.engagement || 0}
   Eng Rate: ${engRate}%
   Posted: ${p.postedAt.toISOString().split("T")[0]}`;
   });
@@ -37,7 +37,7 @@ export function buildInsightsPrompt(posts: Post[]): string {
   // Calculate some aggregate stats for context
   const totalPosts = posts.length;
   const totalReach = posts.reduce((sum, p) => sum + p.metrics.reach, 0);
-  const totalEngagement = posts.reduce((sum, p) => sum + p.metrics.engagement, 0);
+  const totalEngagement = posts.reduce((sum, p) => sum + (p.metrics.engagement || 0), 0);
   const avgReach = Math.round(totalReach / totalPosts);
   const avgEngagement = Math.round(totalEngagement / totalPosts);
 

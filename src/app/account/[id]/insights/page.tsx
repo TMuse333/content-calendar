@@ -1037,13 +1037,13 @@ export default function InsightsPage() {
                         </div>
                         <div className="bg-slate-800 rounded p-2 text-center">
                           <div className="text-lg font-semibold text-white">
-                            {postModal.post.metrics.impressions.toLocaleString()}
+                            {(postModal.post.metrics.impressions || 0).toLocaleString()}
                           </div>
                           <div className="text-xs text-slate-500">Impressions</div>
                         </div>
                         <div className="bg-slate-800 rounded p-2 text-center">
                           <div className="text-lg font-semibold text-white">
-                            {postModal.post.metrics.engagement.toLocaleString()}
+                            {(postModal.post.metrics.engagement || 0).toLocaleString()}
                           </div>
                           <div className="text-xs text-slate-500">Engagement</div>
                         </div>

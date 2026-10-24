@@ -366,7 +366,7 @@ export default function CalendarPage() {
         <CreatePostModal day={showCreateModal.day} month={currentMonth} year={currentYear} creating={creating} onClose={() => setShowCreateModal(null)} onCreate={handleCreatePost} />
       )}
       {showProposalModal && currentAccount && (
-        <ProposalLinkModal posts={posts} accountId={currentAccount.id} onClose={() => setShowProposalModal(false)} />
+        <ProposalLinkModal accountId={currentAccount.id} onClose={() => setShowProposalModal(false)} />
       )}
     </div>
   );
