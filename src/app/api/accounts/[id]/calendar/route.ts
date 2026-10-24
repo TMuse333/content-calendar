@@ -24,12 +24,21 @@ interface CalendarPost {
   id: string;
   title: string;
   caption?: string;
-  status: "Posted" | "Scheduled";
+  status: string;
   type?: string;
   previewUrl?: string;
   postedAt?: string;
   scheduledFor?: string;
   source: "instagram" | "notion";
+}
+
+/**
+ * Notion "Post date" is usually date-only (2026-10-22). Parsed as-is it
+ * becomes UTC midnight, which shifts to the previous day in western
+ * timezones — so anchor date-only values at local noon.
+ */
+function stableDate(iso: string): string {
+  return iso.includes("T") ? iso : `${iso}T12:00:00`;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -73,20 +82,24 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
       const notionPosts = await getNotionPosts(notionConfig);
 
-      // Only include Scheduled posts from Notion
+      // Include every Notion post with a planned "Post date".
+      // A Posted post whose IG link matches a synced Instagram post already
+      // appears via Mongo above, so skip only those to avoid duplicates.
+      const syncedIgUrls = new Set(instagramPosts.map((p) => p.permalink).filter(Boolean));
       for (const post of notionPosts) {
-        if (post.status === "Scheduled") {
-          calendarPosts.push({
-            id: post.id,
-            title: post.title,
-            caption: post.caption,
-            status: "Scheduled",
-            type: post.type,
-            previewUrl: post.previewUrl,
-            scheduledFor: post.updatedAt?.toISOString(),
-            source: "notion",
-          });
-        }
+        if (post.status === "Archived" || !post.postDate) continue;
+        if (post.status === "Posted" && post.igPostLink && syncedIgUrls.has(post.igPostLink)) continue;
+        const date = stableDate(post.postDate);
+        calendarPosts.push({
+          id: post.id,
+          title: post.title,
+          caption: post.caption,
+          status: post.status,
+          type: post.type,
+          previewUrl: post.previewUrls?.[0] ?? post.previewUrl,
+          ...(post.status === "Posted" ? { postedAt: date } : { scheduledFor: date }),
+          source: "notion",
+        });
       }
     }
 

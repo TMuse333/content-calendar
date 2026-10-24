@@ -144,10 +144,10 @@ interface ClientHubData {
 type TabId = "topics" | "review" | "posted" | "calendar" | "results";
 
 const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
+  { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "topics", label: "Topics", icon: Target },
   { id: "review", label: "Review", icon: Clock },
   { id: "posted", label: "Posted", icon: Calendar },
-  { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "results", label: "Results", icon: TrendingUp },
 ];
 
@@ -162,7 +162,7 @@ export default function ClientHubPage() {
   const [data, setData] = useState<ClientHubData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>("topics");
+  const [activeTab, setActiveTab] = useState<TabId>("calendar");
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1256,7 +1256,7 @@ function CalendarTab({ accountId }: { accountId: string }) {
     }).filter((post) => {
       if (filter === "all") return true;
       if (filter === "posts") return post.status === "Posted";
-      if (filter === "scheduled") return post.status === "Scheduled";
+      if (filter === "scheduled") return post.status !== "Posted";
       return true;
     });
   };
@@ -1280,7 +1280,7 @@ function CalendarTab({ accountId }: { accountId: string }) {
   const filterOptions: { value: CalendarFilter; label: string }[] = [
     { value: "all", label: "All Content" },
     { value: "posts", label: "Published" },
-    { value: "scheduled", label: "Scheduled" },
+    { value: "scheduled", label: "Planned" },
   ];
 
   if (loading) {
