@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Copy, Eye, Loader2, X } from "lucide-react";
 import { describeOpens } from "@/lib/share/opens";
-import type { QuestionSetId } from "@/lib/questions/sets";
+import { QUESTION_SETS, isQuestionSetId, type QuestionSetId } from "@/lib/questions/sets";
 
 export interface ShareablePost {
   id: string;
@@ -33,6 +33,19 @@ interface ReactionRow {
   createdAt: string;
 }
 
+interface AnswerSubmission {
+  id: string;
+  setId?: string;
+  answers: Record<string, string>;
+  createdAt: string;
+}
+
+/** Map a stored answer id back to its question prompt. */
+function promptFor(setId: string | undefined, questionId: string): string {
+  const set = isQuestionSetId(setId) ? QUESTION_SETS[setId] : QUESTION_SETS.content;
+  return set.questions.find((q) => q.id === questionId)?.prompt ?? questionId;
+}
+
 export function SharePanel({
   accountId,
   posts,
@@ -53,8 +66,10 @@ export function SharePanel({
   const [copied, setCopied] = useState(false);
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [reactions, setReactions] = useState<ReactionRow[]>([]);
+  const [answerSubmissions, setAnswerSubmissions] = useState<AnswerSubmission[]>([]);
+  const [openAnswers, setOpenAnswers] = useState<string | null>(null);
 
-  const loadLinks = () =>
+  const loadLinks = () => {
     fetch(`/api/accounts/${accountId}/share-links`)
       .then((r) => r.json())
       .then((j) => {
@@ -62,6 +77,11 @@ export function SharePanel({
         setReactions(j.reactions ?? []);
       })
       .catch(() => {});
+    fetch(`/api/accounts/${accountId}/answers`)
+      .then((r) => r.json())
+      .then((j) => setAnswerSubmissions(j.submissions ?? []))
+      .catch(() => {});
+  };
 
   const titleOf = (postId: string) => posts.find((p) => p.id === postId)?.title ?? "Post";
 
@@ -214,6 +234,43 @@ export function SharePanel({
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {answerSubmissions.length > 0 && (
+          <div className="border-t border-slate-800 pt-4">
+            <p className="text-xs uppercase tracking-wider text-slate-500 mb-2">Client answers</p>
+            <div className="space-y-2">
+              {answerSubmissions.slice(0, 8).map((s) => {
+                const setId = isQuestionSetId(s.setId) ? s.setId : "content";
+                const isOpen = openAnswers === s.id;
+                const count = Object.keys(s.answers ?? {}).length;
+                return (
+                  <div key={s.id} className="text-xs">
+                    <button
+                      onClick={() => setOpenAnswers(isOpen ? null : s.id)}
+                      className="w-full flex items-center gap-2 text-left"
+                    >
+                      <span className="text-white">{QUESTION_SETS[setId].label}</span>
+                      <span className="text-slate-500 flex-1">
+                        {count} answers · {new Date(s.createdAt).toLocaleDateString()}
+                      </span>
+                      <span className="text-blue-400">{isOpen ? "Hide" : "View"}</span>
+                    </button>
+                    {isOpen && (
+                      <div className="mt-2 space-y-2 pl-2 border-l border-slate-800">
+                        {Object.entries(s.answers ?? {}).map(([qid, answer]) => (
+                          <div key={qid}>
+                            <p className="text-slate-500">{promptFor(s.setId, qid)}</p>
+                            <p className="text-slate-200 whitespace-pre-wrap">{answer}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

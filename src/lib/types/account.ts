@@ -76,6 +76,20 @@ export interface PlatformConnections {
   // Future: tiktok, youtube, linkedin, etc.
 }
 
+// Per-client chatbot/site persona config (Strategy app owns, website agent reads read-only)
+export interface AgentConfig {
+  displayName: string;             // "Greg", "Sam"
+  fullName: string;
+  title: string;                   // "REALTOR®"
+  brokerage?: string;
+  region: string;                  // human label, e.g. "the Greater Toronto Area"
+  serviceAreas: string[];          // lowercase place names the agent serves
+  timezone: string;                // IANA, e.g. "America/Toronto"
+  notifyEmail: string;             // where lead briefs go
+  meeting: { minutes: number; mode: "phone" | "video" | "in person" };
+  voiceNotes?: string;             // extra tone guidance for the prompt
+}
+
 // Brand config
 export interface BrandConfig {
   primaryColor?: string;
@@ -181,6 +195,12 @@ export interface StrategyAccount {
 
   // Google Drive integration (for assets)
   driveFolderId?: string;
+
+  // Per-client chatbot/site persona (website agent reads this read-only)
+  agent?: AgentConfig;
+
+  // True for demo/test accounts (never mix with real client data)
+  isDemo?: boolean;
 
   // Metadata
   status: AccountStatus;

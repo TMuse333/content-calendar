@@ -20,6 +20,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Link,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { InstagramIcon } from "./components/InstagramIcon";
 import { ConnectInstagramCard } from "./components/ConnectInstagramCard";
@@ -28,14 +29,16 @@ import { ReviewTab } from "./components/ReviewTab";
 import { PostedTab } from "./components/PostedTab";
 import { ResultsTab } from "./components/ResultsTab";
 import { CalendarTab } from "./components/CalendarTab";
+import { QuestionsTab } from "./components/QuestionsTab";
 import type { ClientHubData } from "./components/types";
 
-type TabId = "topics" | "review" | "posted" | "calendar" | "results";
+type TabId = "topics" | "review" | "questions" | "posted" | "calendar" | "results";
 
 const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
   { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "topics", label: "Topics", icon: Target },
   { id: "review", label: "Review", icon: Clock },
+  { id: "questions", label: "Questions", icon: MessageCircleQuestion },
   { id: "posted", label: "Posted", icon: Calendar },
   { id: "results", label: "Results", icon: TrendingUp },
 ];
@@ -250,6 +253,7 @@ export default function ClientHubPage() {
               accountId={accountId}
             />
           )}
+          {activeTab === "questions" && <QuestionsTab accountId={accountId} />}
           {activeTab === "posted" && (
             <PostedTab posts={data.posted} topicNames={data.topicNames} />
           )}

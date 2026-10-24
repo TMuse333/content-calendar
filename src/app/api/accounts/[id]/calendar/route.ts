@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountById } from "@/lib/mongodb/accounts";
 import { getPosts as getMongoPosts } from "@/lib/mongodb/posts";
-import { getPosts as getNotionPosts } from "@/lib/notion";
+import { getPosts as getNotionPosts, getTopics } from "@/lib/notion";
 import type { NotionConfig } from "@/lib/notion/types";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,8 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+// Client-safe fields only. Internal strategy fields (Belief before/after,
+// Pattern, Human nature lever, Literary device) stay hidden, same as client-hub.
 interface CalendarPost {
   id: string;
   title: string;
@@ -27,8 +29,13 @@ interface CalendarPost {
   status: string;
   type?: string;
   previewUrl?: string;
+  previewUrls?: string[];
   postedAt?: string;
   scheduledFor?: string;
+  topic?: string;
+  questionAnswered?: string;
+  decisionStage?: string;
+  cta?: string;
   source: "instagram" | "notion";
 }
 
@@ -80,7 +87,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         topicsDataSourceId: account.notion.topicsDataSourceId || "",
       };
 
-      const notionPosts = await getNotionPosts(notionConfig);
+      const [notionPosts, topics] = await Promise.all([
+        getNotionPosts(notionConfig),
+        getTopics(notionConfig).catch(() => []),
+      ]);
+      const topicNames = new Map(topics.map((t) => [t.id, t.title]));
 
       // Include every Notion post with a planned "Post date".
       // A Posted post whose IG link matches a synced Instagram post already
@@ -97,6 +108,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           status: post.status,
           type: post.type,
           previewUrl: post.previewUrls?.[0] ?? post.previewUrl,
+          previewUrls: post.previewUrls,
+          topic: post.topicId ? topicNames.get(post.topicId) : undefined,
+          questionAnswered: post.questionAnswered || undefined,
+          decisionStage: post.decisionStage,
+          cta: post.cta || undefined,
           ...(post.status === "Posted" ? { postedAt: date } : { scheduledFor: date }),
           source: "notion",
         });

@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb/clientPromise";
 import { getAccountById } from "@/lib/mongodb/accounts";
-import { cleanAnswers, questionsFor, QUESTION_SETS } from "@/lib/questions/sets";
+import { cleanAnswers, questionsFor, QUESTION_SETS, isQuestionSetId, type QuestionSetId } from "@/lib/questions/sets";
 import { writeAnswersToNotion } from "@/lib/notion/answers";
 
 export const dynamic = "force-dynamic";
@@ -39,17 +39,19 @@ export async function POST(req: NextRequest, { params }: Params) {
   const account = await getAccountById(id);
   if (!account) return NextResponse.json({ error: "Account not found" }, { status: 404 });
   const body = await req.json().catch(() => ({}));
-  const answers = cleanAnswers(body.answers, questionsFor(id));
+  const setId: QuestionSetId = isQuestionSetId(body.setId) ? body.setId : "content";
+  const set = QUESTION_SETS[setId];
+  const answers = cleanAnswers(body.answers, set.questions);
   if (Object.keys(answers).length === 0) {
     return NextResponse.json({ error: "Please answer at least one question." }, { status: 400 });
   }
   const notion = account.notion?.postsDataSourceId
     ? await writeAnswersToNotion(
         { postsDataSourceId: account.notion.postsDataSourceId, topicsDataSourceId: account.notion.topicsDataSourceId || "" },
-        { clientName: account.name, setLabel: QUESTION_SETS.content.label, questions: QUESTION_SETS.content.questions, answers, source: "Questions page" }
+        { clientName: account.name, setLabel: set.label, questions: set.questions, answers, source: "Questions page" }
       )
     : null;
   const col = await collection();
-  await col.insertOne({ accountId: id, setId: "content", answers, createdAt: new Date(), usedInPosts: false, notionPageId: notion?.pageId ?? null });
+  await col.insertOne({ accountId: id, setId, answers, createdAt: new Date(), usedInPosts: false, notionPageId: notion?.pageId ?? null });
   return NextResponse.json({ success: true, saved: Object.keys(answers).length });
 }
