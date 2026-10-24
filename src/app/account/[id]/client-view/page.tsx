@@ -206,8 +206,11 @@ export default function ClientHubPage() {
     );
   }
 
-  // Show Instagram connection screen if not connected
-  if (!data.instagram?.connected) {
+  // Show Instagram connection screen if not connected.
+  // Dev-only bypass: the demo account (Sam Rivers) has no real Instagram,
+  // so skip the wall locally to preview the full dashboard.
+  const devBypassConnectWall = process.env.NODE_ENV === "development" && accountId === "demo";
+  if (!data.instagram?.connected && !devBypassConnectWall) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md text-center">
