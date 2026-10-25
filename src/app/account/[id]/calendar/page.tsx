@@ -24,6 +24,7 @@ import { PublishedPostModal } from "./components/PublishedPostModal";
 import { MonthSummary } from "./components/MonthSummary";
 import { ProposalLinkModal } from "./components/ProposalLinkModal";
 import { NotionPostModal, type NotionCalendarPost } from "./components/NotionPostModal";
+import { PipelineStrip } from "./components/PipelineStrip";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = [
@@ -291,6 +292,9 @@ export default function CalendarPage() {
         </div>
       </div>
 
+      {/* What's ready to be posted, at a glance */}
+      <PipelineStrip posts={notionPosts} onSelect={setSelectedNotionPost} />
+
       {/* Month Summary */}
       <MonthSummary posts={posts} month={currentMonth} year={currentYear} />
 
@@ -406,6 +410,26 @@ export default function CalendarPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* Legend */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-500">
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-emerald-500/10 border border-dashed border-emerald-500/40" />
+          Approved — ready to publish
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-amber-500/10 border border-dashed border-amber-500/40" />
+          Waiting on client OK
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-blue-500/10 border border-dashed border-blue-500/40" />
+          Draft / idea
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-slate-800 border border-slate-700" />
+          Published on Instagram
+        </span>
       </div>
 
       {/* Modals */}
