@@ -128,6 +128,27 @@ export function SharePanel({
     loadLinks();
   };
 
+  /**
+   * Repoint a live link at a different question set. Same code, so the client
+   * keeps the URL they already have along with their approvals and their
+   * place in the wizard.
+   */
+  const changeSet = async (code: string, next: string) => {
+    setError(null);
+    try {
+      const r = await fetch(`/api/accounts/${accountId}/share-links`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, questionSet: next || null }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Could not change the questions");
+      loadLinks();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not change the questions");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
       <button aria-label="Close" className="absolute inset-0 bg-black/70" onClick={onClose} />
@@ -288,7 +309,6 @@ export function SharePanel({
                     <div className="flex items-center gap-2">
                       <span className="flex-1 text-slate-400">
                         {new Date(l.createdAt).toLocaleDateString()} · {l.postIds.length} posts
-                        {l.questionSet ? ` + ${l.questionSet}` : ""}
                         {l.revoked ? " · revoked" : expired ? " · expired" : ""}
                       </span>
                       {!l.revoked && !expired && (
@@ -299,6 +319,22 @@ export function SharePanel({
                         </>
                       )}
                     </div>
+                    {!l.revoked && !expired && (
+                      <label className="mt-1 flex items-center gap-1.5 text-slate-500">
+                        Asks
+                        <select
+                          value={l.questionSet ?? ""}
+                          onChange={(e) => changeSet(l.code, e.target.value)}
+                          className="bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300"
+                        >
+                          <option value="">no questions</option>
+                          {Object.values(QUESTION_SETS).map((s) => (
+                            <option key={s.id} value={s.id}>{s.label}</option>
+                          ))}
+                        </select>
+                        <span className="text-slate-600">· same link</span>
+                      </label>
+                    )}
                     <p className={`mt-0.5 flex items-center gap-1 ${opens.opened ? "text-emerald-400" : "text-slate-600"}`}>
                       <Eye className="w-3 h-3" /> {opens.text}
                     </p>

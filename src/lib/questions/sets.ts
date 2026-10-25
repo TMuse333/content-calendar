@@ -49,8 +49,11 @@ export const CLIENT_WIN_QUESTIONS: Question[] = [
   { id: "win-who", prompt: "Think of a recent client you were proud to help. Who were they, roughly, and what were they trying to do?", hint: "First names or 'a couple downsizing from Kensington' is plenty.", notionProperty: "Client win: who" },
   { id: "win-stuck", prompt: "What were they stuck on or worried about before they called you?", hint: "Price? Timing? Where to go next? A past bad experience?", notionProperty: "Client win: stuck on" },
   { id: "win-difference", prompt: "What did you do that made the difference?", hint: "The one thing you did that another agent might not have.", notionProperty: "Client win: what made the difference" },
-  { id: "win-others", prompt: "Anyone else from this year with a story like that?", hint: "Just a name or two and one line each.", notionProperty: "Client win: others" },
-  { id: "win-tag-ok", prompt: "Are any of these clients OK being tagged or named in a post?", hint: "If unsure, we keep them anonymous.", notionProperty: "Client win: tag OK" },
+  { id: "win-nearly-wrong", prompt: "Did anything nearly go wrong along the way?", hint: "Financing, an inspection, a deal falling through. The part you fixed is the part worth telling.", notionProperty: "Client win: nearly went wrong" },
+  { id: "win-their-words", prompt: "Do you remember anything they said when it was done?", hint: "Even a rough paraphrase. One real line from them beats a paragraph from me.", notionProperty: "Client win: their words" },
+  { id: "win-others", prompt: "Who else from this year has a story like that?", hint: "Even just a name and one line each — we'd space them out over the next month or two.", notionProperty: "Client win: others" },
+  { id: "win-photos-tag", prompt: "Do you have photos with any of these clients — and are they OK being named or tagged?", hint: "Sold sign, closing day, a selfie. Photos are what make these posts work. If unsure about naming, we keep them anonymous.", notionProperty: "Client win: photos and tag OK" },
+  { id: "win-cost-ranges", prompt: "Last one, optional: for the \"what selling costs\" post, any dollar ranges you're comfortable with for HST, lawyer, mortgage discharge and movers?", hint: "Right now those slides only show the 5% commission example.", notionProperty: "Carousel: cost ranges" },
 ];
 
 /**
@@ -85,7 +88,7 @@ export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
   clients: {
     id: "clients",
     label: "Your recent client wins",
-    intro: "Your best post this year was a client congratulations. A few questions so we can turn wins like that into posts. No names needed unless you want them. Short answers or a voice note back are fine.",
+    intro: "Your best post this year was a client congratulations — it reached 709 people, about 3× your normal post. A few questions so we can turn wins like that into posts. No names needed unless you want them. Short answers or a voice note back are fine.",
     questions: CLIENT_WIN_QUESTIONS,
   },
   carousels: {

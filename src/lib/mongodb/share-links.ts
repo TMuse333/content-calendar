@@ -1,5 +1,6 @@
 import clientPromise from "./clientPromise";
 import type { ShareLink } from "@/lib/share/links";
+import type { QuestionSetId } from "@/lib/questions/sets";
 
 async function db() {
   const client = await clientPromise;
@@ -22,6 +23,23 @@ export async function listShareLinks(accountId: string): Promise<ShareLink[]> {
     .sort({ createdAt: -1 })
     .limit(20)
     .toArray();
+}
+
+/**
+ * Change which question set a live link asks, without issuing a new code.
+ * The URL the client already has keeps working, and their reactions
+ * (share_reactions, keyed by code + postId) and in-browser resume position
+ * (localStorage, keyed by code) are both untouched.
+ */
+export async function setShareLinkQuestionSet(
+  accountId: string,
+  code: string,
+  questionSet: QuestionSetId | null
+): Promise<boolean> {
+  const r = await (await db())
+    .collection<ShareLink>("share_links")
+    .updateOne({ accountId, code }, { $set: { questionSet } });
+  return r.matchedCount > 0;
 }
 
 export async function revokeShareLink(accountId: string, code: string) {
