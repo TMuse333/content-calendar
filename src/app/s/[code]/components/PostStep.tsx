@@ -50,6 +50,8 @@ export function PostStep({
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Something went wrong");
+      setMode("idle");
+      setComment("");
       onReacted(post.id, reaction);
       onNext();
     } catch (e) {

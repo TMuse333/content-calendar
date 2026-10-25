@@ -323,6 +323,7 @@ export default function SharePage() {
 
         {!isIntro && !isDone && postIndex >= 0 && postIndex < posts.length && (
           <PostStep
+            key={posts[postIndex].id}
             post={posts[postIndex]}
             code={code}
             index={postIndex}
