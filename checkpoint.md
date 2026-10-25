@@ -57,6 +57,35 @@ or wait for fresh activity (any opens after 4:02 PM Atlantic are Greg).
   blocked THOMAS task is half-done, only tmp-notion-upload branch deletion left)
 - "What the DM keywords mean" decoder page created in Greg's Notion hub
 
+## Baseline & post-performance findings (Oct 24)
+
+Baseline (30d window, auto-captured Oct 22 on IG connect, in Mongo
+`baselines` + rendered at /account/greg-caseley/report):
+779 followers · 1,438 reach · 73 accounts engaged · 143 interactions ·
+46 profile visits · **0 website clicks** · 205 lifetime posts ·
+**5.08% avg engagement** (good — audience likes him, too few see it,
+content asks nothing of them).
+
+Per-post sync ran Oct 24 (50 posts now in Mongo → /library, /insights):
+- #1 post of the year: "Congratulations to Cassandra and Robin" —
+  **709 reach, ~5× his typical post**. Client-win content is Greg's
+  proven top format.
+- #2: Caseley Classic Golf Tournament (418 reach, most likes) —
+  personal/community beats business content.
+- Listings/open-houses/scenery: 120–170 reach, bottom tier.
+- ~0 saves and ~0 comments across all 50 posts — nothing save-worthy,
+  which is what the question-answering carousels target.
+
+Strategy implication (agreed with Thomas): integrate client success into
+the carousels — captions of Nov 1/6/8 posts get real client micro-stories
+woven in ONCE Greg's client-win answers arrive (never invent stories);
+the Nov 4 Cassandra & Robin carousel is the pure client-win play; Monday's
+client-wins link uses the "your C&R post was 5× your normal reach" framing.
+Client-win becomes a standing format (~every 3rd post) in future planning.
+
+Baseline text drafted for Thomas to send Greg (see session Oct 24) —
+starting line + the client-story insight + "report in two weeks."
+
 ## Still open
 
 - Thomas: add PUBLISH_SECRET to Vercel env (value in local .env.local) + delete test IG post
