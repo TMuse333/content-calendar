@@ -101,7 +101,7 @@ export function NotionPostModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-800 flex items-start justify-between">
           <div>
@@ -131,9 +131,19 @@ export function NotionPostModal({
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          <div className="flex gap-4">
-            <div className="w-36 h-44 bg-slate-800 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
-              <PostPreview url={post.previewUrl} urls={post.previewUrls} alt={post.title} iconClassName="w-8 h-8 text-slate-600" />
+          <div className="flex flex-col md:flex-row gap-5">
+            {/* Full-size preview with slide controls */}
+            <div className="flex-1">
+              <div className="aspect-[4/5] bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
+                <PostPreview
+                  url={post.previewUrl}
+                  urls={post.previewUrls}
+                  alt={post.title}
+                  controls
+                  className="w-full h-full object-contain bg-black"
+                  iconClassName="w-16 h-16 text-slate-600"
+                />
+              </div>
             </div>
             <div className="flex-1 min-w-0">
               {post.questionAnswered && (
@@ -142,7 +152,7 @@ export function NotionPostModal({
                 </p>
               )}
               {post.caption ? (
-                <p className="text-slate-300 text-sm whitespace-pre-wrap line-clamp-[10]">{post.caption}</p>
+                <p className="text-slate-300 text-sm whitespace-pre-wrap">{post.caption}</p>
               ) : (
                 <p className="text-slate-500 text-sm">No caption in Notion yet.</p>
               )}
