@@ -72,9 +72,11 @@ folder inside it.
 - **The bot only sees what's shared with it.** Empty list = the folder
   wasn't shared with the bot's email (or the share hasn't propagated — give
   it a minute).
-- **Uploads are owned by the service account**, not by Thomas, and count
-  against the bot's own 15 GB quota. Fine for images/small video; revisit
-  (Workspace Shared Drive) if that ever bites.
+- **The bot CANNOT upload files to My Drive folders** — Google removed all
+  storage quota from service accounts ("Service Accounts do not have storage
+  quota", 403). Reads, downloads, listing and folder creation work; file
+  uploads need a Workspace Shared Drive or OAuth delegation. Until then:
+  humans upload, the bot reads.
 - **Key security:** the base64 blob IS the credential. Env vars and password
   manager only — never in git, chat logs, or client-side code. If it ever
   leaks: delete the key on the service account in GCP (Keys tab), lift the
