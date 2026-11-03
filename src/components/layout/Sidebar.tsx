@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Calendar,
   ExternalLink,
+  HardDrive,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAccount } from "@/contexts/AccountContext";
@@ -90,6 +91,12 @@ export function Sidebar() {
           href: `${accountBase}/report`,
           icon: TrendingUp,
           description: "Baseline vs current",
+        },
+        {
+          label: "Drive",
+          href: `${accountBase}/drive`,
+          icon: HardDrive,
+          description: "Content assets in Drive",
         },
       ],
     },
