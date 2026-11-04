@@ -191,6 +191,9 @@ export async function updateAccount(
   if (updates.email !== undefined) updateDoc.email = updates.email;
   if (updates.status !== undefined) updateDoc.status = updates.status;
   if (updates.driveFolderId !== undefined) updateDoc.driveFolderId = updates.driveFolderId;
+  if (updates.isDemo !== undefined) updateDoc.isDemo = updates.isDemo;
+  // agent is a complete object from the form (serviceAreas is an array) — set whole, don't dot-merge.
+  if (updates.agent !== undefined) updateDoc.agent = updates.agent;
 
   // Nested configs - merge with existing
   if (updates.brand) {

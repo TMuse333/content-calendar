@@ -3,8 +3,21 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAccount } from "@/contexts/AccountContext";
-import { Settings, Plus, Trash2, Target, Loader2, Save, Check, X, Camera, ExternalLink, RefreshCw, AlertCircle } from "lucide-react";
-import type { Campaign, InformationPoint } from "@/lib/types/account";
+import { Settings, Plus, Trash2, Target, Loader2, Save, Check, X, Camera, ExternalLink, RefreshCw, AlertCircle, Bot } from "lucide-react";
+import type { Campaign, InformationPoint, AgentConfig } from "@/lib/types/account";
+
+const EMPTY_AGENT: AgentConfig = {
+  displayName: "",
+  fullName: "",
+  title: "",
+  brokerage: "",
+  region: "",
+  serviceAreas: [],
+  timezone: "",
+  notifyEmail: "",
+  meeting: { minutes: 15, mode: "phone" },
+  voiceNotes: "",
+};
 
 function SettingsContent() {
   const { currentAccount, refreshAccounts } = useAccount();
@@ -25,11 +38,52 @@ function SettingsContent() {
   const [refreshingToken, setRefreshingToken] = useState(false);
   const [connectionMessage, setConnectionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Agent / website config
+  const [agent, setAgent] = useState<AgentConfig>(EMPTY_AGENT);
+  const [isDemo, setIsDemo] = useState(false);
+  const [serviceAreasText, setServiceAreasText] = useState("");
+  const [savingAgent, setSavingAgent] = useState(false);
+  const [agentSaved, setAgentSaved] = useState(false);
+
   useEffect(() => {
     if (!currentAccount) return;
     setCampaigns(currentAccount.campaigns || []);
+    const a = currentAccount.agent ?? EMPTY_AGENT;
+    setAgent({ ...EMPTY_AGENT, ...a, meeting: { ...EMPTY_AGENT.meeting, ...a.meeting } });
+    setServiceAreasText((a.serviceAreas ?? []).join(", "));
+    setIsDemo(currentAccount.isDemo ?? false);
     setLoading(false);
   }, [currentAccount]);
+
+  const handleSaveAgent = async () => {
+    if (!currentAccount) return;
+    setSavingAgent(true);
+    setAgentSaved(false);
+    try {
+      const payload: AgentConfig = {
+        ...agent,
+        serviceAreas: serviceAreasText
+          .split(",")
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean),
+      };
+      const res = await fetch(`/api/accounts/${currentAccount.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent: payload, isDemo }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAgentSaved(true);
+        await refreshAccounts();
+        setTimeout(() => setAgentSaved(false), 2500);
+      }
+    } catch (error) {
+      console.error("Failed to save agent config:", error);
+    } finally {
+      setSavingAgent(false);
+    }
+  };
 
   // Handle OAuth callback messages
   useEffect(() => {
@@ -222,6 +276,164 @@ function SettingsContent() {
               readOnly
               className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Agent / Website Config */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
+        <div className="flex items-center gap-2 mb-1">
+          <Bot className="w-5 h-5 text-emerald-400" />
+          <h2 className="text-lg font-semibold text-white">Agent / Website Config</h2>
+        </div>
+        <p className="text-sm text-slate-400 mb-5">
+          Powers this client&apos;s chatbot and public site. The website agent reads these fields; this is the only place they&apos;re set.
+        </p>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Display name</label>
+            <input
+              type="text"
+              value={agent.displayName}
+              onChange={(e) => setAgent({ ...agent, displayName: e.target.value })}
+              placeholder="Sam"
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Full name</label>
+            <input
+              type="text"
+              value={agent.fullName}
+              onChange={(e) => setAgent({ ...agent, fullName: e.target.value })}
+              placeholder="Sam Rivers"
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Title</label>
+            <input
+              type="text"
+              value={agent.title}
+              onChange={(e) => setAgent({ ...agent, title: e.target.value })}
+              placeholder="REALTOR®"
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Brokerage</label>
+            <input
+              type="text"
+              value={agent.brokerage ?? ""}
+              onChange={(e) => setAgent({ ...agent, brokerage: e.target.value })}
+              placeholder="Demo Realty"
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm text-slate-400 mb-1">Region</label>
+            <input
+              type="text"
+              value={agent.region}
+              onChange={(e) => setAgent({ ...agent, region: e.target.value })}
+              placeholder="the Greater Toronto Area"
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm text-slate-400 mb-1">Service areas</label>
+            <input
+              type="text"
+              value={serviceAreasText}
+              onChange={(e) => setServiceAreasText(e.target.value)}
+              placeholder="toronto, etobicoke, north york, scarborough"
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+            />
+            <p className="mt-1 text-xs text-slate-500">Comma-separated. Lowercased on save. Used to decide if a visitor is in area.</p>
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Timezone</label>
+            <input
+              type="text"
+              value={agent.timezone}
+              onChange={(e) => setAgent({ ...agent, timezone: e.target.value })}
+              placeholder="America/Toronto"
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Notify email</label>
+            <input
+              type="email"
+              value={agent.notifyEmail}
+              onChange={(e) => setAgent({ ...agent, notifyEmail: e.target.value })}
+              placeholder="sam@demo-realty.example"
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+            />
+            <p className="mt-1 text-xs text-slate-500">Where lead briefs are sent.</p>
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Meeting length (min)</label>
+            <input
+              type="number"
+              min={5}
+              step={5}
+              value={agent.meeting.minutes}
+              onChange={(e) => setAgent({ ...agent, meeting: { ...agent.meeting, minutes: Number(e.target.value) } })}
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Meeting mode</label>
+            <select
+              value={agent.meeting.mode}
+              onChange={(e) => setAgent({ ...agent, meeting: { ...agent.meeting, mode: e.target.value as AgentConfig["meeting"]["mode"] } })}
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+            >
+              <option value="phone">phone</option>
+              <option value="video">video</option>
+              <option value="in person">in person</option>
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm text-slate-400 mb-1">Voice notes</label>
+            <textarea
+              value={agent.voiceNotes ?? ""}
+              onChange={(e) => setAgent({ ...agent, voiceNotes: e.target.value })}
+              placeholder="Friendly, plain-spoken, never salesy."
+              rows={2}
+              className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 resize-y"
+            />
+            <p className="mt-1 text-xs text-slate-500">Extra tone guidance mixed into the chatbot&apos;s prompt.</p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between border-t border-slate-800 pt-4">
+          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isDemo}
+              onChange={(e) => setIsDemo(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-800 accent-emerald-500"
+            />
+            Demo account
+            <span className="text-slate-500">(never emails real people)</span>
+          </label>
+          <div className="flex items-center gap-3">
+            {agentSaved && (
+              <span className="text-sm text-emerald-400 flex items-center gap-1">
+                <Check className="w-4 h-4" /> Saved
+              </span>
+            )}
+            <button
+              onClick={handleSaveAgent}
+              disabled={savingAgent}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg flex items-center gap-2"
+            >
+              {savingAgent ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save config
+            </button>
           </div>
         </div>
       </div>

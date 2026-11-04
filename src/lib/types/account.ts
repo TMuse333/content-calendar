@@ -230,6 +230,8 @@ export interface UpdateAccountRequest {
   brand?: Partial<BrandConfig>;
   platforms?: Partial<PlatformConnections>;
   driveFolderId?: string;
+  agent?: AgentConfig;        // chatbot/site persona (website agent reads this)
+  isDemo?: boolean;
 }
 
 // Campaign request types
