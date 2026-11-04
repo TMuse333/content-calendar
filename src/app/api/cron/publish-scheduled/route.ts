@@ -1,280 +1,169 @@
-import { graphHost } from "@/lib/platforms/ig-graph";
-// Cron Job: Publish Scheduled Carousels
-//
-// This endpoint should be called periodically (e.g., every 5 minutes)
-// to check for and publish due scheduled posts.
-//
-// For Vercel: Add to vercel.json:
-// { "crons": [{ "path": "/api/cron/publish-scheduled", "schedule": "*/5 * * * *" }] }
-//
-// For local dev: Run manually or use a cron job
+/**
+ * Cron: publish due Notion posts to Instagram.
+ *
+ * Arming model (chosen with Thomas): a post auto-publishes only when its
+ * Notion Status = "Scheduled", its Post date is today or earlier, it has
+ * slides, and it has no IG post link yet (idempotent — never double-posts).
+ * Approved-but-not-Scheduled posts are left untouched.
+ *
+ * Wire it in vercel.json:
+ *   { "crons": [{ "path": "/api/cron/publish-scheduled", "schedule": "30 23 * * *" }] }
+ * Vercel sends `Authorization: Bearer $CRON_SECRET` automatically when
+ * CRON_SECRET is set in the project env.
+ *
+ * Runs the exact publish chain as the manual button (see lib/publish/instagram).
+ */
 
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient, Db } from "mongodb";
+import { getAccounts } from "@/lib/mongodb/accounts";
+import { getPosts, updatePostStatus } from "@/lib/notion";
+import { getNotionClient } from "@/lib/notion/client";
+import { publishSlidesToInstagram, type IgTarget } from "@/lib/publish/instagram";
+import type { NotionConfig } from "@/lib/notion/types";
 
-interface InstagramPlatform {
-  connected: boolean;
-  accessToken: string;
-  userId: string;
-  apiHost?: string;
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+
+function isDue(postDate: string | undefined, todayUtc: string): boolean {
+  if (!postDate) return false;
+  // Post date is a date-only string (YYYY-MM-DD); publish on/after it.
+  return postDate.slice(0, 10) <= todayUtc;
 }
 
-interface Account {
-  id: string;
-  platforms?: {
-    instagram?: InstagramPlatform;
-  };
-}
-
-interface ScheduledCarousel {
-  id: string;
-  accountId: string;
-  imageUrls: string[];
-  caption: string;
-  scheduledFor: Date;
-  status: "pending" | "publishing" | "published" | "failed";
-}
-
-async function createCarouselContainer(
-  accessToken: string,
-  userId: string,
-  imageUrls: string[],
-  caption: string,
-  apiHost?: string
-): Promise<string> {
-  const childContainerIds: string[] = [];
-
-  for (const imageUrl of imageUrls) {
-    const response = await fetch(
-      `${graphHost(apiHost)}/v21.0/${userId}/media`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_url: imageUrl,
-          is_carousel_item: true,
-          access_token: accessToken,
-        }),
-      }
-    );
-
-    const data = await response.json();
-    if (data.error) {
-      throw new Error(`Media container failed: ${data.error.message}`);
-    }
-    childContainerIds.push(data.id);
-  }
-
-  const carouselResponse = await fetch(
-    `${graphHost(apiHost)}/v21.0/${userId}/media`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        media_type: "CAROUSEL",
-        children: childContainerIds.join(","),
-        caption: caption,
-        access_token: accessToken,
-      }),
-    }
-  );
-
-  const carouselData = await carouselResponse.json();
-  if (carouselData.error) {
-    throw new Error(`Carousel container failed: ${carouselData.error.message}`);
-  }
-
-  return carouselData.id;
-}
-
-async function publishCarousel(
-  accessToken: string,
-  userId: string,
-  containerId: string,
-  apiHost?: string
-): Promise<string> {
-  const response = await fetch(
-    `${graphHost(apiHost)}/v21.0/${userId}/media_publish`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        creation_id: containerId,
-        access_token: accessToken,
-      }),
-    }
-  );
-
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(`Publish failed: ${data.error.message}`);
-  }
-
-  return data.id;
-}
-
-async function processCarousel(
-  db: Db,
-  carousel: ScheduledCarousel,
-  account: Account
-): Promise<{ success: boolean; mediaId?: string; error?: string }> {
-  const instagram = account.platforms?.instagram;
-
-  if (!instagram?.connected || !instagram.accessToken || !instagram.userId) {
-    return { success: false, error: "Instagram not connected" };
-  }
-
-  try {
-    // Mark as publishing
-    await db.collection("scheduled_carousels").updateOne(
-      { id: carousel.id },
-      { $set: { status: "publishing" } }
-    );
-
-    // Create and publish
-    const containerId = await createCarouselContainer(
-      instagram.accessToken,
-      instagram.userId,
-      carousel.imageUrls,
-      carousel.caption,
-      instagram.apiHost
-    );
-
-    // Wait for processing
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    const mediaId = await publishCarousel(
-      instagram.accessToken,
-      instagram.userId,
-      containerId,
-      instagram.apiHost
-    );
-
-    // Mark as published
-    await db.collection("scheduled_carousels").updateOne(
-      { id: carousel.id },
-      {
-        $set: {
-          status: "published",
-          publishedAt: new Date(),
-          mediaId: mediaId,
-        },
-      }
-    );
-
-    return { success: true, mediaId };
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
-    await db.collection("scheduled_carousels").updateOne(
-      { id: carousel.id },
-      {
-        $set: {
-          status: "failed",
-          error: errorMessage,
-        },
-      }
-    );
-
-    return { success: false, error: errorMessage };
-  }
-}
-
-export async function GET(request: NextRequest) {
-  // Verify cron secret if configured (for security)
-  const authHeader = request.headers.get("authorization");
+export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    // Allow without auth in development
-    if (process.env.NODE_ENV === "production") {
+  if (cronSecret) {
+    if (req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+  } else if (process.env.NODE_ENV === "production") {
+    // Refuse to run unauthenticated in production — this posts to live accounts.
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
   }
 
-  const mongoUri = process.env.MONGODB_URI;
-  if (!mongoUri) {
-    return NextResponse.json({ error: "Database not configured" }, { status: 500 });
-  }
-
-  const client = await MongoClient.connect(mongoUri);
-  const db = client.db("strategy");
+  // ?dryRun=1 — list what WOULD publish today without touching Instagram or Notion.
+  const dryRun = ["1", "true"].includes(req.nextUrl.searchParams.get("dryRun") ?? "");
+  const todayUtc = new Date().toISOString().slice(0, 10);
+  const results: Array<{
+    accountId: string;
+    postId: string;
+    title: string;
+    published?: boolean;
+    permalink?: string;
+    error?: string;
+  }> = [];
 
   try {
-    // Find carousels due for publishing
-    const now = new Date();
-    const dueCarousels = await db
-      .collection<ScheduledCarousel>("scheduled_carousels")
-      .find({
-        status: "pending",
-        scheduledFor: { $lte: now },
-      })
-      .toArray();
+    const accounts = await getAccounts();
 
-    if (dueCarousels.length === 0) {
-      await client.close();
-      return NextResponse.json({
-        message: "No carousels due for publishing",
-        checked: now.toISOString(),
-      });
-    }
+    for (const account of accounts) {
+      const ds = account.notion?.postsDataSourceId;
+      const instagram = account.platforms?.instagram;
+      if (!ds || !instagram?.connected || !instagram.accessToken || !instagram.userId) continue;
 
-    const results: Array<{
-      id: string;
-      accountId: string;
-      success: boolean;
-      mediaId?: string;
-      error?: string;
-    }> = [];
+      const notionConfig: NotionConfig = {
+        postsDataSourceId: ds,
+        topicsDataSourceId: account.notion?.topicsDataSourceId || "",
+      };
 
-    for (const carousel of dueCarousels) {
-      // Get account
-      const account = await db
-        .collection<Account>("accounts")
-        .findOne({ id: carousel.accountId });
-
-      if (!account) {
+      let scheduled;
+      try {
+        scheduled = await getPosts(notionConfig, { status: "Scheduled" });
+      } catch (e) {
         results.push({
-          id: carousel.id,
-          accountId: carousel.accountId,
-          success: false,
-          error: "Account not found",
+          accountId: account.id,
+          postId: "-",
+          title: "(listing Scheduled posts)",
+          error: e instanceof Error ? e.message : "Notion query failed",
         });
         continue;
       }
 
-      const result = await processCarousel(db, carousel, account);
-      results.push({
-        id: carousel.id,
-        accountId: carousel.accountId,
-        ...result,
-      });
-
-      console.log(
-        `Carousel ${carousel.id}: ${result.success ? "Published" : "Failed"} - ${result.mediaId || result.error}`
+      const due = scheduled.filter(
+        (p) => isDue(p.postDate, todayUtc) && !p.igPostLink
       );
+
+      const ig: IgTarget = {
+        accessToken: instagram.accessToken,
+        userId: instagram.userId,
+        apiHost: instagram.apiHost,
+        username: instagram.username,
+      };
+
+      for (const post of due) {
+        const slides = post.previewUrls?.length
+          ? post.previewUrls
+          : post.previewUrl
+          ? [post.previewUrl]
+          : [];
+        if (slides.length === 0) {
+          results.push({
+            accountId: account.id,
+            postId: post.id,
+            title: post.title,
+            error: "No slides attached in Notion",
+          });
+          continue;
+        }
+
+        if (dryRun) {
+          results.push({
+            accountId: account.id,
+            postId: post.id,
+            title: `${post.title} (${slides.length} slides — would publish)`,
+            published: false,
+          });
+          continue;
+        }
+
+        try {
+          const { permalink } = await publishSlidesToInstagram({
+            slides,
+            caption: post.caption ?? "",
+            ig,
+            blobPrefix: `cron/${account.id}/${post.id}`,
+          });
+
+          // Notion write-back: Status=Posted + IG link (same as manual button).
+          await updatePostStatus(notionConfig, post.id, "Posted");
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (getNotionClient().pages as any).update({
+            page_id: post.id,
+            properties: { "IG post link": { url: permalink } },
+          });
+
+          results.push({
+            accountId: account.id,
+            postId: post.id,
+            title: post.title,
+            published: true,
+            permalink,
+          });
+          console.log(`[cron:publish] ${account.id} "${post.title}" → ${permalink}`);
+        } catch (e) {
+          const error = e instanceof Error ? e.message : "Publish failed";
+          results.push({ accountId: account.id, postId: post.id, title: post.title, error });
+          console.error(`[cron:publish] ${account.id} "${post.title}" failed: ${error}`);
+        }
+      }
     }
 
-    await client.close();
-
     return NextResponse.json({
-      processed: results.length,
+      checked: todayUtc,
+      published: results.filter((r) => r.published).length,
+      failed: results.filter((r) => r.error).length,
       results,
-      checked: now.toISOString(),
     });
-
   } catch (error) {
-    await client.close();
-    console.error("Cron error:", error);
-    return NextResponse.json({
-      error: "Cron job failed",
-      details: error instanceof Error ? error.message : "Unknown error",
-    }, { status: 500 });
+    console.error("[cron:publish] fatal", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Cron failed" },
+      { status: 500 }
+    );
   }
 }
 
-// Also support POST for manual triggering
-export async function POST(request: NextRequest) {
-  return GET(request);
+// Manual trigger (same guard).
+export async function POST(req: NextRequest) {
+  return GET(req);
 }
