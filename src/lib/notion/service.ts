@@ -343,6 +343,34 @@ export async function updatePostStatus(
   };
 }
 
+/**
+ * Overwrite a post's Caption (a rich-text property). Notion caps a single
+ * rich-text item at 2000 chars, so long captions are split across items.
+ */
+export async function updatePostCaption(
+  config: NotionConfig,
+  postId: string,
+  caption: string
+): Promise<{ success: true; postId: string }> {
+  const notion = getNotionClient();
+
+  const chunks = caption.length
+    ? (caption.match(/[\s\S]{1,2000}/g) ?? [])
+    : [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (notion.pages as any).update({
+    page_id: postId,
+    properties: {
+      Caption: {
+        rich_text: chunks.map((content) => ({ type: "text", text: { content } })),
+      },
+    },
+  });
+
+  return { success: true, postId };
+}
+
 // =============================================================================
 // FEEDBACK (client "Request changes" comments)
 // =============================================================================

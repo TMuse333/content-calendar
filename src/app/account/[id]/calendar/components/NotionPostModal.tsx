@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Check, ExternalLink, Loader2, Send, AlertCircle } from "lucide-react";
+import { X, Check, ExternalLink, Loader2, Send, AlertCircle, Save } from "lucide-react";
 import { PostPreview } from "@/components/media/PostPreview";
 
 /**
@@ -34,16 +34,25 @@ export function NotionPostModal({
   igUsername,
   onClose,
   onPublished,
+  onUpdated,
 }: {
   post: NotionCalendarPost;
   accountId: string;
   igUsername?: string;
   onClose: () => void;
   onPublished: () => void;
+  onUpdated?: () => void;
 }) {
   const [phase, setPhase] = useState<"idle" | "confirm" | "publishing" | "done">("idle");
   const [permalink, setPermalink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Editable caption
+  const [caption, setCaption] = useState(post.caption ?? "");
+  const [savingCaption, setSavingCaption] = useState(false);
+  const [captionSaved, setCaptionSaved] = useState(false);
+  const [captionError, setCaptionError] = useState<string | null>(null);
+  const captionDirty = caption !== (post.caption ?? "");
 
   const slides = post.previewUrls?.length ? post.previewUrls : post.previewUrl ? [post.previewUrl] : [];
   const canPublish = post.status === "Approved" && slides.length > 0;
@@ -55,7 +64,8 @@ export function NotionPostModal({
       })
     : null;
 
-  const publish = async () => {
+  // Publishing and caption edits share the one admin secret (no login yet).
+  const getSecret = (): string | null => {
     let secret = "";
     try {
       secret = localStorage.getItem(SECRET_KEY) ?? "";
@@ -63,14 +73,53 @@ export function NotionPostModal({
       /* fall through to prompt */
     }
     if (!secret) {
-      secret = window.prompt("Publish code (PUBLISH_SECRET):")?.trim() ?? "";
-      if (!secret) return;
+      secret = window.prompt("Admin code (PUBLISH_SECRET):")?.trim() ?? "";
+      if (!secret) return null;
       try {
         localStorage.setItem(SECRET_KEY, secret);
       } catch {
         /* session-only is fine */
       }
     }
+    return secret;
+  };
+
+  const saveCaption = async () => {
+    const secret = getSecret();
+    if (!secret) return;
+    setSavingCaption(true);
+    setCaptionSaved(false);
+    setCaptionError(null);
+    try {
+      const res = await fetch(`/api/accounts/${accountId}/posts/${post.id}/caption`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-publish-secret": secret },
+        body: JSON.stringify({ caption }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        try {
+          localStorage.removeItem(SECRET_KEY);
+        } catch {
+          /* ignore */
+        }
+        throw new Error("Wrong admin code — try again.");
+      }
+      if (!res.ok) throw new Error(j.error || "Save failed");
+      post.caption = caption; // keep the modal's baseline in sync so it's no longer dirty
+      setCaptionSaved(true);
+      setTimeout(() => setCaptionSaved(false), 2500);
+      onUpdated?.();
+    } catch (e) {
+      setCaptionError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSavingCaption(false);
+    }
+  };
+
+  const publish = async () => {
+    const secret = getSecret();
+    if (!secret) return;
 
     setPhase("publishing");
     setError(null);
@@ -151,10 +200,46 @@ export function NotionPostModal({
                   Answers: <span className="text-slate-300">&ldquo;{post.questionAnswered}&rdquo;</span>
                 </p>
               )}
-              {post.caption ? (
-                <p className="text-slate-300 text-sm whitespace-pre-wrap">{post.caption}</p>
-              ) : (
-                <p className="text-slate-500 text-sm">No caption in Notion yet.</p>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs uppercase tracking-wider text-slate-500">Caption</label>
+                <span className={`text-xs ${caption.length > 2200 ? "text-red-400" : "text-slate-600"}`}>
+                  {caption.length}/2200
+                </span>
+              </div>
+              <textarea
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                rows={10}
+                placeholder="Write the caption for this post…"
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-emerald-500 resize-y whitespace-pre-wrap"
+              />
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  onClick={saveCaption}
+                  disabled={!captionDirty || savingCaption}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {savingCaption ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save caption
+                </button>
+                {captionDirty && !savingCaption && !captionSaved && (
+                  <button
+                    onClick={() => setCaption(post.caption ?? "")}
+                    className="text-xs text-slate-500 hover:text-white transition-colors"
+                  >
+                    Revert
+                  </button>
+                )}
+                {captionSaved && (
+                  <span className="flex items-center gap-1 text-sm text-emerald-400">
+                    <Check className="w-4 h-4" /> Saved to Notion
+                  </span>
+                )}
+              </div>
+              {captionError && (
+                <p className="mt-2 flex items-center gap-2 text-sm text-red-400">
+                  <AlertCircle className="w-4 h-4" /> {captionError}
+                </p>
               )}
             </div>
           </div>

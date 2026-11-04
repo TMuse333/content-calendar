@@ -29,6 +29,7 @@ export {
   getPostById,
   getPostByIgLink,
   updatePostStatus,
+  updatePostCaption,
   createPostFeedback,
   // Topics
   getTopics,

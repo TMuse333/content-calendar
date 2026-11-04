@@ -465,6 +465,7 @@ export default function CalendarPage() {
             fetchNotionPosts();
             fetchPosts();
           }}
+          onUpdated={() => fetchNotionPosts()}
         />
       )}
     </div>
