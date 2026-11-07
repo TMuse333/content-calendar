@@ -73,16 +73,17 @@ export const CAROUSEL_QUESTIONS: Question[] = [
 ];
 
 /**
- * "from-away": follow-ups from the Nov 5 story call. The acreage/IRAC and
- * US-money facts were confirmed on the call itself, so this round is just
- * permissions + the Paragon links Greg said he'd send.
+ * "from-away": the five answers that finish the from-away carousel series
+ * (Nov 5 story call). Each answer drops into a specific slide that's
+ * currently a holding line — no yes/no permission asks here (those go by
+ * text) and no questions that don't unblock a post.
  */
 export const FROM_AWAY_QUESTIONS: Question[] = [
-  { id: "perm-saint-john", prompt: "Can I tell the Saint John couple's story? Anonymous (\"a couple from Saint John\"), or first names if they'd be happy with it?", hint: "And is it OK to mention it came as a referral from Aaron?" },
-  { id: "perm-fredericton", prompt: "Same for the Fredericton cottage sale last winter — anonymous OK?" },
-  { id: "perm-pricing-stories", prompt: "The Morell house (18 showings in 2 days, won at $25K over) and the Charlottetown one that went $100K over asking — OK to use those in pricing posts, kept anonymous?" },
-  { id: "fact-pricing-rule", prompt: "Before it goes in a post: fair market is roughly assessed value plus 30%, and no real action in the first 30 days usually means it's priced too high — comfortable saying that publicly?", hint: "If you'd phrase it differently, give me your version." },
-  { id: "paragon", prompt: "You mentioned you'd send the Paragon links for The Iris and the industrial building — paste them here, plus anything else you've got listed.", hint: "I'll do the listing graphics for all of them." },
+  { id: "away-taxes", prompt: "What did you tell the Saint John couple about taxes? The post currently says \"I walk you through the taxes before you make an offer\" — give me the actual walkthrough.", hint: "Numbers included — the non-resident property tax difference, anything that surprises people from away." },
+  { id: "irac-confirm", prompt: "Checking the rules slide: non-residents can own up to 5 acres; more than that, or buying in a company name, means IRAC approval and about $3,000 for the application. Is that right?", hint: "Anything else worth knowing — how long IRAC takes, whether anyone gets refused?" },
+  { id: "us-money", prompt: "US buyers: about 2 weeks for the money to arrive, and the lawyer holds a draft 5 or 6 days — OK to put those numbers on a slide? And what's the move when a US bank won't send to Canada?", hint: "The slide is a timeline from wire sent to closing, so correct numbers matter." },
+  { id: "story-details", prompt: "Three small things on the Saint John story: OK to mention the awards banquet in Halifax where you met the referring agent? Can we say \"they still call me with questions\"? And is it fair to say hardly any of their questions were about the house?", hint: "A quick yes/no on each is perfect." },
+  { id: "trades-list", prompt: "Write out your actual list — the electrician, plumber, home inspector, septic guy and carpenter you'd call for your own place.", hint: "First name and trade is plenty. The list itself becomes the slide, in your handwriting if you'll send a photo of it." },
 ];
 
 export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
@@ -112,8 +113,8 @@ export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
   },
   "from-away": {
     id: "from-away",
-    label: "Story call follow-ups: 5 quick ones",
-    intro: "Five quick ones from our call Wednesday before these posts go out. One line each is plenty.",
+    label: "From-away carousels: 5 things to fill in",
+    intro: "Five answers finish the \"buying on PEI from away\" posts — what you write goes straight onto the slides. A line or two each is plenty.",
     questions: FROM_AWAY_QUESTIONS,
   },
 };
