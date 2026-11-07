@@ -20,7 +20,7 @@ export interface QuestionSet {
   questions: Question[];
 }
 
-export type QuestionSetId = "content" | "strategy" | "clients" | "carousels";
+export type QuestionSetId = "content" | "strategy" | "clients" | "carousels" | "from-away";
 
 export const SELLER_QUESTIONS: Question[] = [
   { id: "top-questions", prompt: "What are the top 3 questions sellers asked you this year?", hint: "Exactly how they asked them is perfect.", notionProperty: "Top 3 seller questions" },
@@ -72,6 +72,19 @@ export const CAROUSEL_QUESTIONS: Question[] = [
   { id: "costs-ranges", prompt: "Optional: if you want dollar ranges for HST, lawyer, mortgage discharge and movers, send the numbers you're comfortable with.", hint: "Selling costs carousel (posts Oct 28). Right now the slides only show the 5% commission example.", notionProperty: "Carousel: cost ranges" },
 ];
 
+/**
+ * "from-away": follow-ups from the Nov 5 story call. The acreage/IRAC and
+ * US-money facts were confirmed on the call itself, so this round is just
+ * permissions + the Paragon links Greg said he'd send.
+ */
+export const FROM_AWAY_QUESTIONS: Question[] = [
+  { id: "perm-saint-john", prompt: "Can I tell the Saint John couple's story? Anonymous (\"a couple from Saint John\"), or first names if they'd be happy with it?", hint: "And is it OK to mention it came as a referral from Aaron?" },
+  { id: "perm-fredericton", prompt: "Same for the Fredericton cottage sale last winter — anonymous OK?" },
+  { id: "perm-pricing-stories", prompt: "The Morell house (18 showings in 2 days, won at $25K over) and the Charlottetown one that went $100K over asking — OK to use those in pricing posts, kept anonymous?" },
+  { id: "fact-pricing-rule", prompt: "Before it goes in a post: fair market is roughly assessed value plus 30%, and no real action in the first 30 days usually means it's priced too high — comfortable saying that publicly?", hint: "If you'd phrase it differently, give me your version." },
+  { id: "paragon", prompt: "You mentioned you'd send the Paragon links for The Iris and the industrial building — paste them here, plus anything else you've got listed.", hint: "I'll do the listing graphics for all of them." },
+];
+
 export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
   content: {
     id: "content",
@@ -96,6 +109,12 @@ export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
     label: "Carousel confirmations",
     intro: "Quick confirmations before these carousels go live — a yes/no plus a line is perfect, and skip any you want.",
     questions: CAROUSEL_QUESTIONS,
+  },
+  "from-away": {
+    id: "from-away",
+    label: "Story call follow-ups: 5 quick ones",
+    intro: "Five quick ones from our call Wednesday before these posts go out. One line each is plenty.",
+    questions: FROM_AWAY_QUESTIONS,
   },
 };
 
