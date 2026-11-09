@@ -8,6 +8,7 @@
  * client subfolders inherit.
  */
 import { google, type drive_v3 } from "googleapis";
+import { Readable } from "stream";
 
 let cached: drive_v3.Drive | null = null;
 
@@ -85,4 +86,59 @@ export async function downloadFile(fileId: string): Promise<Buffer> {
   const drive = getDrive();
   const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "arraybuffer" });
   return Buffer.from(res.data as ArrayBuffer);
+}
+
+/**
+ * Upload a file into a folder the bot can edit (Editor on a My Drive folder,
+ * or Content Manager on a Shared Drive). Streams are uploaded resumably, so
+ * large videos are fine; the API cap is 5 TB per file.
+ *
+ * Quota note: in a My Drive folder the created file is OWNED BY THE BOT and
+ * counts against the bot's own ~15 GB — put heavy assets in a Shared Drive,
+ * where files belong to the drive instead.
+ */
+export async function uploadFile(opts: {
+  folderId: string;
+  name: string;
+  data: Buffer | NodeJS.ReadableStream;
+  mimeType?: string;
+}): Promise<DriveEntry> {
+  const drive = getDrive();
+  const body = Buffer.isBuffer(opts.data) ? Readable.from(opts.data) : opts.data;
+  const res = await drive.files.create({
+    requestBody: { name: opts.name, parents: [opts.folderId] },
+    media: { mimeType: opts.mimeType, body },
+    fields: "id, name, mimeType, size, modifiedTime, webViewLink",
+    supportsAllDrives: true,
+  });
+  const f = res.data;
+  return {
+    id: f.id!,
+    name: f.name!,
+    mimeType: f.mimeType ?? "",
+    isFolder: false,
+    size: f.size ? Number(f.size) : undefined,
+    modifiedTime: f.modifiedTime ?? undefined,
+    webViewLink: f.webViewLink ?? undefined,
+  };
+}
+
+/** Find a child folder by name, creating it if missing (e.g. "2026-11"). */
+export async function ensureFolder(parentId: string, name: string): Promise<string> {
+  const drive = getDrive();
+  const existing = await drive.files.list({
+    q: `'${parentId}' in parents and name = '${name.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    fields: "files(id)",
+    pageSize: 1,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+  const hit = existing.data.files?.[0]?.id;
+  if (hit) return hit;
+  const created = await drive.files.create({
+    requestBody: { name, parents: [parentId], mimeType: "application/vnd.google-apps.folder" },
+    fields: "id",
+    supportsAllDrives: true,
+  });
+  return created.data.id!;
 }
