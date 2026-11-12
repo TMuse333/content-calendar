@@ -185,6 +185,10 @@ export interface NotionConfig {
   postsDataSourceId: string;            // Posts collection:// URL
   topicsDataSourceId: string;           // Topics collection:// URL
   feedbackDataSourceId?: string;        // Feedback collection:// URL (client "Request changes" comments)
+  // Waterline situation-tree model (optional overrides; readers discover by title otherwise).
+  treeDataSourceId?: string;            // Tree collection:// URL (per-client situation tree)
+  storiesDataSourceId?: string;         // Stories collection:// URL (client real-case evidence)
+  callsDataSourceId?: string;           // Calls collection:// URL (recorded story calls)
 }
 
 // =============================================================================
