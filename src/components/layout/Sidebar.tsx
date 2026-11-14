@@ -14,6 +14,7 @@ import {
   Calendar,
   ExternalLink,
   HardDrive,
+  Phone,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAccount } from "@/contexts/AccountContext";
@@ -97,6 +98,12 @@ export function Sidebar() {
           href: `${accountBase}/drive`,
           icon: HardDrive,
           description: "Content assets in Drive",
+        },
+        {
+          label: "Calls",
+          href: `${accountBase}/calls`,
+          icon: Phone,
+          description: "Story calls & tree coverage",
         },
       ],
     },
