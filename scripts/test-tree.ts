@@ -10,7 +10,7 @@
  */
 import { readFileSync } from "fs";
 import { join } from "path";
-import { getTree, type TreeNode } from "../src/lib/notion/tree";
+import { getTree, markPrimaryNiche, type TreeNode } from "../src/lib/notion/tree";
 
 // Minimal zero-dep .env.local loader (tsx doesn't auto-load it).
 function loadEnv() {
@@ -49,7 +49,8 @@ function printTree(nodes: TreeNode[]) {
       n.storyIds.length && `stories:${n.storyIds.length}`,
       n.postIds.length && `posts:${n.postIds.length}`,
     ].filter(Boolean).join(" ");
-    console.log(`${pad}${n.name}  [${mark}]${counts ? "  " + counts : ""}`);
+    const edge = n.isPrimaryNiche ? "  ★EDGE" : "";
+    console.log(`${pad}${n.name}  [${mark}]${counts ? "  " + counts : ""}${edge}`);
     for (const c of childrenOf(n.id)) line(c, depth + 1);
   };
 
@@ -63,14 +64,18 @@ async function main() {
     process.exit(1);
   }
 
-  const nodes = await getTree({
+  const raw = await getTree({
     postsDataSourceId: "",
     topicsDataSourceId: "",
     treeDataSourceId: GREG_TREE,
   });
+  // Greg's strongest edge (account.primaryNiche) — flagged structurally, not prose.
+  const nodes = markPrimaryNiche(raw, "Moving here from away");
 
   console.log(`\nGreg's Tree — ${nodes.length} nodes\n${"─".repeat(40)}`);
   printTree(nodes);
+  const edge = nodes.find((n) => n.isPrimaryNiche);
+  console.log(`\n★ primary niche: ${edge ? edge.name : "(not found)"}`);
 
   const byStatus = nodes.reduce<Record<string, number>>((acc, n) => {
     const k = n.status ?? n.level ?? "—";

@@ -1,13 +1,13 @@
 /**
  * Call-coverage analysis: transcript × situation tree → per-node verdicts,
- * saved to the Notion Calls db. The "process a call" function (plumbing lane).
+ * saved to the Notion Calls db.
  *
- * Reads the tree through src/lib/notion/tree.ts (strategy lane's reader —
- * never parse the Tree db here). Calls-db discovery below is TEMP — swap to
- * lib/notion/calls.ts when the strategy session merges it.
+ * Reads the tree through src/lib/notion/tree.ts and the Calls db through
+ * src/lib/notion/calls.ts — the strategy lane's readers; never parse Notion here.
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { getNotionClient } from "@/lib/notion/client";
+import { findCallsDataSource, getCalls } from "@/lib/notion/calls";
 import type { NotionConfig } from "@/lib/notion/types";
 import type { TreeNode } from "@/lib/notion/tree";
 
@@ -107,52 +107,6 @@ ${transcript}`,
   return JSON.parse(text.text) as CallAnalysis;
 }
 
-const TTL_MS = 10 * 60 * 1000;
-const discovered = new Map<string, { id: string | null; at: number }>();
-const stripId = (id: string) => id.replace("collection://", "");
-
-/**
- * TEMP — replace with lib/notion/calls.ts when the strategy session merges
- * its Calls reader. Discover the "Calls" child db on the client's page.
- */
-export async function findCallsDataSource(
-  config: NotionConfig,
-  client: AnyClient = getNotionClient()
-): Promise<string | null> {
-  const key = `calls:${config.postsDataSourceId}`;
-  const hit = discovered.get(key);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.id;
-
-  let found: string | null = null;
-  try {
-    const ds = await client.dataSources.retrieve({ data_source_id: stripId(config.postsDataSourceId) });
-    const databaseId: string | undefined = ds?.parent?.database_id;
-    if (databaseId) {
-      const db = await client.databases.retrieve({ database_id: databaseId });
-      const pageId: string | undefined = db?.parent?.page_id;
-      if (pageId) {
-        let cursor: string | undefined;
-        do {
-          const res = await client.blocks.children.list({ block_id: pageId, start_cursor: cursor, page_size: 100 });
-          for (const b of res.results ?? []) {
-            const title = b.type === "child_database" ? (b.child_database?.title ?? "") : "";
-            if (/^calls$/i.test(title.trim())) {
-              const callsDb = await client.databases.retrieve({ database_id: b.id });
-              found = callsDb?.data_sources?.[0]?.id ?? null;
-              break;
-            }
-          }
-          cursor = found ? undefined : res.has_more ? res.next_cursor : undefined;
-        } while (cursor);
-      }
-    }
-  } catch (err) {
-    console.warn("[calls:discovery] failed", err);
-  }
-  discovered.set(key, { id: found, at: Date.now() });
-  return found;
-}
-
 export interface CallRow {
   id: string;
   url: string;
@@ -161,29 +115,23 @@ export interface CallRow {
   nodeIds: string[];
 }
 
-/** List rows in the Calls db, newest first. Best effort — [] when absent. */
+/**
+ * List rows in the Calls db, newest first — adapts the strategy reader
+ * (lib/notion/calls.ts `getCalls`) to the UI's `CallRow` shape. The dedup:
+ * discovery + parsing live in one place (calls.ts), not here.
+ */
 export async function listCalls(
   config: NotionConfig,
   client: AnyClient = getNotionClient()
 ): Promise<CallRow[]> {
-  const dataSourceId = await findCallsDataSource(config, client);
-  if (!dataSourceId) return [];
-  try {
-    const res = await client.dataSources.query({ data_source_id: dataSourceId, page_size: 50 });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rows: CallRow[] = (res.results ?? []).map((p: any) => ({
-      id: p.id,
-      url: p.url ?? "",
-      title: p.properties?.Call?.title?.map((t: AnyClient) => t.plain_text).join("") ?? "(untitled)",
-      date: p.properties?.Date?.date?.start,
-      nodeIds: p.properties?.["Nodes touched"]?.relation?.map((r: AnyClient) => r.id) ?? [],
-    }));
-    rows.sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
-    return rows;
-  } catch (err) {
-    console.warn("[calls:list] failed", err);
-    return [];
-  }
+  const calls = await getCalls(config, client);
+  return calls.map((c) => ({
+    id: c.id,
+    url: c.url ?? "",
+    title: c.name || "(untitled)",
+    date: c.date,
+    nodeIds: c.nodesTouchedIds,
+  }));
 }
 
 const para = (text: string) => ({

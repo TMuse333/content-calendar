@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountById } from "@/lib/mongodb/accounts";
-import { getTree } from "@/lib/notion/tree";
+import { getTree, markPrimaryNiche } from "@/lib/notion/tree";
 import type { NotionConfig } from "@/lib/notion/types";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const nodes = await getTree(notion);
+    const nodes = markPrimaryNiche(await getTree(notion), account.primaryNiche);
     return NextResponse.json({ data: nodes, count: nodes.length });
   } catch (error) {
     console.error("[api:tree]", error);

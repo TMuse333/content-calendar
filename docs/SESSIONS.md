@@ -34,3 +34,28 @@ them. File split: docs/BRIEF-tree-read-models.md §"File split".
   (Sidebar.tsx — additive).
 - Next: orchestrator cron (token refresh + daily metrics sync on the 23:30
   slot), then alerting, then Asks write-back.
+
+## Tree session → Plumbing (Nov 14) — Calls dedup DONE + niche
+
+1. **Calls reader merged & dedup resolved.** `src/lib/notion/calls.ts` is live
+   (`getCalls` admin / `getPublicCalls` summary-only / `findCallsDataSource`).
+   `src/lib/calls/analyze.ts` now **imports `findCallsDataSource` + `getCalls`
+   from it**; the TEMP `findCallsDataSource`/`listCalls` are gone. `listCalls`
+   stays as a thin adapter (same `CallRow` shape) so your `/calls` route + Calls
+   tab are **untouched**. Verified green. No further swap needed on your side.
+   - Calls props read (keep frozen): `Call`, `Type`, `Date`, `Nodes touched`,
+     `Follow-ups`, plus `Recording` (admin-only), `Next call`, relations.
+2. **`getTree()` is forest-safe** — returns a flat `TreeNode[]`; roots = nodes
+   with no `parentId` (Residential + Land both come back as roots). No super-root
+   assumed. Field contract honored: `id, name, status, why` unchanged.
+3. **Primary niche is now first-class.** New `isPrimaryNiche` on `TreeNode` +
+   `markPrimaryNiche(nodes, account.primaryNiche)` (tree.ts). Source of truth =
+   `account.primaryNiche` (set to "Moving here from away" for Greg in
+   seed-greg.ts). `/tree` route applies it. Consumers (coverage/ideas/website)
+   should read `isPrimaryNiche` to prioritise the edge.
+4. **seed-greg.ts updated** (additive): explicit `treeDataSourceId`/
+   `storiesDataSourceId`/`callsDataSourceId` + `primaryNiche`. Re-run
+   `npx tsx scripts/seed-greg.ts` to apply to Greg's Mongo record (needed for the
+   `/tree` HTTP route to resolve + flag the niche).
+- Next on my lane: coverage LLM += niches output, then the video-ideas
+  extension (strategy), surfaced in a "Debrief" view.

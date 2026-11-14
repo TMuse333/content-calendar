@@ -38,6 +38,7 @@ export interface TreeNode {
   changeIds: string[];        // → Tree-changes rows
   why?: string;
   notes?: string;
+  isPrimaryNiche?: boolean;   // the client's strongest edge (set via markPrimaryNiche)
 }
 
 const TTL_MS = 10 * 60 * 1000;
@@ -133,6 +134,22 @@ function parseNode(page: unknown): TreeNode {
     why: extractRichText(props["Why"]),
     notes: extractRichText(props["Notes"]),
   };
+}
+
+/**
+ * Flag the client's primary-niche node (their strongest edge) as a structured
+ * field instead of prose. `primaryNiche` is an account-level value
+ * (`account.primaryNiche`): either a node id or a node name (case-insensitive).
+ * Consumers (coverage, ideas, website) read `isPrimaryNiche` to prioritise it.
+ */
+export function markPrimaryNiche(nodes: TreeNode[], primaryNiche?: string): TreeNode[] {
+  if (!primaryNiche) return nodes;
+  const key = primaryNiche.trim().toLowerCase();
+  return nodes.map((n) =>
+    n.id === primaryNiche || n.name.trim().toLowerCase() === key
+      ? { ...n, isPrimaryNiche: true }
+      : n
+  );
 }
 
 /**

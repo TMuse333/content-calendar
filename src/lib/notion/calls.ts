@@ -26,6 +26,7 @@ export type CallType = "Story call" | "Review" | "Onboarding" | "Other";
 /** Full call (admin). DB-row level — transcript is page body, never included here. */
 export interface Call {
   id: string;
+  url?: string;              // Notion page URL (for admin links)
   name: string;
   type?: CallType;
   date?: string;             // Date (ISO)
@@ -128,10 +129,11 @@ export async function findCallsDataSource(
 }
 
 function parseCall(page: unknown): Call {
-  const p = page as { id: string; properties: Record<string, unknown> };
+  const p = page as { id: string; url?: string; properties: Record<string, unknown> };
   const props = p.properties ?? {};
   return {
     id: p.id,
+    url: p.url,
     name: extractTitle(props["Call"]),
     type: extractSelect(props["Type"]) as CallType | undefined,
     date: extractDateStart(props["Date"]),

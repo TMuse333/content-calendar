@@ -18,10 +18,14 @@ import type { StrategyAccount } from "../src/lib/types/account";
 
 dotenv.config({ path: ".env.local" });
 
-// Greg's Notion data source IDs from his Content Hub
+// Greg's Notion data source IDs from his Waterline page
 const GREG_NOTION_CONFIG = {
   postsDataSourceId: "collection://09d0f481-0d99-4e07-a65d-685ac13c4304",
   topicsDataSourceId: "collection://7204330d-841d-45ea-bda0-2d7b1cc491f8",
+  // Waterline situation-tree model (explicit overrides; readers also discover by title)
+  treeDataSourceId: "collection://0c99ea02-46b2-4002-9994-953cce6163bf",
+  storiesDataSourceId: "collection://c0d322e6-d700-4494-9189-5734e7116117",
+  callsDataSourceId: "collection://5b5284d1-bcab-49a3-804a-462fdefc3207",
 };
 
 async function main() {
@@ -45,6 +49,9 @@ async function main() {
 
     // Notion integration - where strategy lives
     notion: GREG_NOTION_CONFIG,
+
+    // Primary niche (strongest edge) — the tree node consumers prioritise
+    primaryNiche: "Moving here from away",
 
     // Platform connections (to be set up via Instagram OAuth)
     platforms: {},
