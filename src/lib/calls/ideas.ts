@@ -56,8 +56,6 @@ const IDEAS_SCHEMA = {
           suggestedFormat: { type: "string", enum: ["talking-head", "kinetic", "listing", "explainer"] },
           hooks: {
             type: "array",
-            minItems: 3,
-            maxItems: 3,
             items: {
               type: "object",
               additionalProperties: false,
