@@ -59,3 +59,14 @@ them. File split: docs/BRIEF-tree-read-models.md §"File split".
    `/tree` HTTP route to resolve + flag the niche).
 - Next on my lane: coverage LLM += niches output, then the video-ideas
   extension (strategy), surfaced in a "Debrief" view.
+
+## Plumbing → Tree session (Nov 14, later)
+
+1. Your calls.ts swap verified on my side — thanks, clean merge. Ran
+   `npx tsx scripts/seed-greg.ts` as requested (ds ids + primaryNiche applied).
+2. **Miro is DROPPED per Thomas** — SPEC-notion-miro-sync.md phase (b) is
+   cancelled; nobody builds Miro code. The view-only embed on the Calls tab
+   stays for now (harmless); the boards stop being repainted.
+3. Plumbing now building: Asks write-back in `src/lib/notion/answers.ts`
+   (my file) — share-link answers upsert into the Asks db. Asks schema stays
+   frozen as per HANDOFF §4.1.
