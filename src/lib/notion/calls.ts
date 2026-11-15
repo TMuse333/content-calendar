@@ -206,7 +206,8 @@ export async function getCallTranscript(
     const parts: string[] = [];
     cursor = undefined;
     do {
-      const res = await client.blocks.children.list({ block_id: transcriptPageId, start_cursor: cursor, page_size: 100 });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res: any = await client.blocks.children.list({ block_id: transcriptPageId, start_cursor: cursor, page_size: 100 });
       for (const b of res.results ?? []) {
         const rt = (b as Record<string, { rich_text?: Array<{ plain_text?: string }> }>)[b.type]?.rich_text;
         if (Array.isArray(rt)) parts.push(rt.map((t) => t.plain_text ?? "").join(""));
