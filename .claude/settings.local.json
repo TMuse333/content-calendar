@@ -55,7 +55,18 @@
       "Bash(xxd \"video1342968562.mp4\")",
       "Bash(ffmpeg -v error -i \"video1342968562_FIXED.mp4\" -f null -)",
       "Bash(echo \"FIXED decode exit: $?\")",
-      "Bash(open *)"
+      "Bash(open *)",
+      "mcp__claude_ai_Miro__canvas_get_canvas_composer_skill",
+      "mcp__claude_ai_Miro__canvas_create_from_svg",
+      "mcp__claude_ai_Miro__canvas_update_from_svg",
+      "Skill(claude-api)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'Calls: transcript-to-tree coverage analysis \\(LLM\\) + admin Calls tab *)",
+      "Bash(awk '/export async function listCalls|export function listCalls/{f=1} f{print; n++} n>55{exit}' src/lib/calls/analyze.ts)",
+      "Bash(git pull *)",
+      "Bash(npx tsc *)",
+      "Bash(vercel inspect *)",
+      "Bash(npm install *)"
     ]
   }
 }

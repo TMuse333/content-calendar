@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountById } from "@/lib/mongodb/accounts";
 import { getTree, markPrimaryNiche } from "@/lib/notion/tree";
+import { getCallTranscript } from "@/lib/notion/calls";
 import { analyzeTranscript } from "@/lib/calls/analyze";
 import { generateVideoIdeas } from "@/lib/calls/ideas";
 import type { NotionConfig } from "@/lib/notion/types";
@@ -30,9 +31,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Account has no Notion config" }, { status: 400 });
     }
 
-    const { transcript } = (await request.json()) as { transcript?: string };
+    const body = (await request.json()) as { callId?: string; transcript?: string };
+    // Pull the transcript from Notion by callId (preferred); transcript body is a fallback.
+    let transcript = body.transcript ?? "";
+    if (!transcript && body.callId) {
+      transcript = await getCallTranscript(body.callId);
+    }
     if (!transcript || transcript.trim().length < 50) {
-      return NextResponse.json({ error: "Provide a transcript (min 50 chars)" }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: body.callId
+            ? "No transcript in Notion for this call yet. Add a 'Transcript —' page under the call row (the video app should write it there)."
+            : "Provide a callId or transcript.",
+        },
+        { status: 400 }
+      );
     }
 
     const nodes = markPrimaryNiche(await getTree(notion), account.primaryNiche);

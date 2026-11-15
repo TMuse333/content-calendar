@@ -69,10 +69,13 @@ async function main() {
     updatedAt: new Date(),
   };
 
-  // Upsert the account
+  // Upsert the account. IMPORTANT: never overwrite `platforms` (the Instagram
+  // connection) on re-runs — only set it when the account is first created.
+  // Otherwise every seed run disconnects Instagram on that database.
+  const { platforms, ...configFields } = accountData;
   const result = await db.collection("accounts").updateOne(
     { id: "greg-caseley" },
-    { $set: accountData },
+    { $set: configFields, $setOnInsert: { platforms } },
     { upsert: true }
   );
 

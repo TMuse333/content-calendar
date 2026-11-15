@@ -79,9 +79,16 @@ const IDEAS_SCHEMA = {
   },
 } as const;
 
-/** Normalize for verbatim matching (quotes/whitespace/case). */
+/** Normalize for verbatim matching: strip [mm:ss]/[hh:mm:ss] timestamps (ASR
+ *  transcripts interleave them and break substring matching), quotes, case,
+ *  and collapse whitespace. */
 function norm(s: string): string {
-  return s.toLowerCase().replace(/[‘’“”"']/g, "").replace(/\s+/g, " ").trim();
+  return s
+    .toLowerCase()
+    .replace(/\[\d{1,2}:\d{2}(?::\d{2})?\]/g, " ")
+    .replace(/[‘’“”"']/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**

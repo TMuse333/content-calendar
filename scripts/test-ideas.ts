@@ -58,7 +58,8 @@ async function main() {
     await getTree({ postsDataSourceId: "", topicsDataSourceId: "", treeDataSourceId: GREG_TREE }),
     "Moving here from away"
   );
-  const transcript = await fetchTranscript(NOV5_TRANSCRIPT_PAGE);
+  const fileArg = process.argv[2];
+  const transcript = fileArg ? readFileSync(fileArg, "utf8") : await fetchTranscript(NOV5_TRANSCRIPT_PAGE);
   console.log(`transcript: ${transcript.length} chars · tree: ${nodes.filter((n) => n.status).length} nodes\n`);
   console.log("generating ideas (one Claude call)…\n");
 

@@ -15,6 +15,8 @@ import {
   ExternalLink,
   HardDrive,
   Phone,
+  Sparkles,
+  Network,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAccount } from "@/contexts/AccountContext";
@@ -104,6 +106,18 @@ export function Sidebar() {
           href: `${accountBase}/calls`,
           icon: Phone,
           description: "Story calls & tree coverage",
+        },
+        {
+          label: "Debrief",
+          href: `${accountBase}/debrief`,
+          icon: Sparkles,
+          description: "Call → coverage + video ideas",
+        },
+        {
+          label: "Tree",
+          href: `${accountBase}/tree`,
+          icon: Network,
+          description: "Situation tree + evidence",
         },
       ],
     },

@@ -176,6 +176,50 @@ export async function getCalls(
   return calls;
 }
 
+/**
+ * Pull a call's transcript text from Notion: the "Transcript —" child page's
+ * body under the call row. Returns "" if the call has no Notion transcript yet
+ * (e.g. it's still only a file reference) — the caller should surface that, not
+ * fall back to pasting.
+ */
+export async function getCallTranscript(
+  callPageId: string,
+  client: AnyClient = getNotionClient()
+): Promise<string> {
+  try {
+    // find a child page titled like "Transcript"
+    let transcriptPageId: string | undefined;
+    let cursor: string | undefined;
+    do {
+      const res = await client.blocks.children.list({ block_id: callPageId, start_cursor: cursor, page_size: 100 });
+      for (const b of res.results ?? []) {
+        if (b.type === "child_page" && /transcript/i.test(b.child_page?.title ?? "")) {
+          transcriptPageId = b.id;
+          break;
+        }
+      }
+      cursor = transcriptPageId ? undefined : res.has_more ? res.next_cursor : undefined;
+    } while (cursor);
+    if (!transcriptPageId) return "";
+
+    // read the transcript page's text blocks
+    const parts: string[] = [];
+    cursor = undefined;
+    do {
+      const res = await client.blocks.children.list({ block_id: transcriptPageId, start_cursor: cursor, page_size: 100 });
+      for (const b of res.results ?? []) {
+        const rt = (b as Record<string, { rich_text?: Array<{ plain_text?: string }> }>)[b.type]?.rich_text;
+        if (Array.isArray(rt)) parts.push(rt.map((t) => t.plain_text ?? "").join(""));
+      }
+      cursor = res.has_more ? res.next_cursor : undefined;
+    } while (cursor);
+    return parts.filter(Boolean).join("\n");
+  } catch (err) {
+    console.warn("[notion:calls] transcript fetch failed", err);
+    return "";
+  }
+}
+
 /** Summary-only calls. Strips recording URL, follow-ups, relations; never transcript. */
 export async function getPublicCalls(
   config: NotionConfig,
