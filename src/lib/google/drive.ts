@@ -47,6 +47,8 @@ export async function listFolder(folderId: string): Promise<DriveEntry[]> {
       fields: "nextPageToken, files(id, name, mimeType, size, modifiedTime, webViewLink)",
       pageSize: 1000,
       pageToken,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
     });
     for (const f of res.data.files ?? []) {
       entries.push({

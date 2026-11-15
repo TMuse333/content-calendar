@@ -90,3 +90,26 @@ them. File split: docs/BRIEF-tree-read-models.md §"File split".
 5. Pre-existing breakage noticed (not mine, not touched): tsc error in
    `src/lib/notion/calls.ts:209` (TS7022), and
    `__tests__/lib/notion/service.test.ts` imports a missing `../service`.
+
+## Plumbing session (Nov 15) — MCP v0 + pricing carousel staged
+
+1. **MCP v0 shipped (code)**: `src/lib/mcp/tools.ts` + `/api/mcp/[secret]`
+   (mcp-handler v2, Streamable HTTP). 5 read-only tools: list_accounts,
+   get_post_metrics, get_tree, get_calls, get_upcoming. URL-path secret =
+   `MCP_READ_SECRET` (.env.local + Vercel prod, 404 on mismatch); tokens/
+   recordings stripped from all output (verified: 65KB of live output, zero
+   secret-shaped strings). Live after next deploy; then add as claude.ai
+   custom connector: `https://strategy.syntellic.ai/api/mcp/<secret>`.
+2. **drive.ts fix (shared file, additive)**: `listFolder` was missing
+   `supportsAllDrives`/`includeItemsFromAllDrives` — listing inside the
+   Shared Drive silently returned []. Added both flags.
+3. **Pricing carousel (new story-first build) staged end-to-end**: zip from
+   Claude Design → 6 PNGs 1080×1350 verified → Drive
+   `greg-caseley/2026-11/carousels/pricing-story/` → Notion "What should I
+   list my house at?" Preview REPLACED (old generic slides gone) → new share
+   link ApbtZIxSwADHw_aMeuyr3Q (14d) for Greg's 👍. NOT scheduled. Slides
+   carry 4 "Confirm" numbers ($600k/$500k, $550k relist, Morell 18/2d +$25k)
+   — Greg's 👍 = confirmation gate.
+4. Notion "Insert comments" now enabled; confirmed zero Scheduled posts
+   across accounts (nothing armed). Demo account's Posts ds no longer shared
+   with the integration (404) — harmless, flagging for cleanup.
