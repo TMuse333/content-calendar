@@ -13,6 +13,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getAccounts } from "@/lib/mongodb/accounts";
+import { alertFailure } from "@/lib/notion/alerts";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -84,5 +85,15 @@ export async function GET(req: NextRequest) {
 
   const ok = results.every((r) => r.ok);
   if (!ok) console.error("[cron:orchestrator] failures:", JSON.stringify(results));
+
+  // Alert Thomas: failed steps + per-account metrics-sync misses (the step
+  // itself reports ok even when an individual account's sync fails).
+  const lines = results.filter((r) => !r.ok).map((r) => `${r.step}: ${r.error}`);
+  const metrics = results.find((r) => r.step === "metrics-sync");
+  for (const [accountId, status] of Object.entries((metrics?.detail as Record<string, string>) ?? {})) {
+    if (status !== "ok") lines.push(`metrics-sync ${accountId}: ${status}`);
+  }
+  if (lines.length) await alertFailure("Nightly orchestrator (23:30 UTC cron)", lines);
+
   return NextResponse.json({ ok, ranAt: new Date().toISOString(), results });
 }

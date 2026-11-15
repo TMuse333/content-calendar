@@ -19,6 +19,7 @@ import { getAccounts } from "@/lib/mongodb/accounts";
 import { getPosts, updatePostStatus } from "@/lib/notion";
 import { getNotionClient } from "@/lib/notion/client";
 import { publishSlidesToInstagram, type IgTarget } from "@/lib/publish/instagram";
+import { alertFailure } from "@/lib/notion/alerts";
 import type { NotionConfig } from "@/lib/notion/types";
 
 export const dynamic = "force-dynamic";
@@ -148,14 +149,25 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const failed = results.filter((r) => r.error);
+    if (failed.length && !dryRun) {
+      await alertFailure(
+        "Publish cron",
+        failed.map((f) => `${f.accountId} "${f.title}": ${f.error}`)
+      );
+    }
+
     return NextResponse.json({
       checked: todayUtc,
       published: results.filter((r) => r.published).length,
-      failed: results.filter((r) => r.error).length,
+      failed: failed.length,
       results,
     });
   } catch (error) {
     console.error("[cron:publish] fatal", error);
+    await alertFailure("Publish cron", [
+      `fatal: ${error instanceof Error ? error.message : "Cron failed"}`,
+    ]);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Cron failed" },
       { status: 500 }

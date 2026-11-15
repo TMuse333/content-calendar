@@ -7,6 +7,7 @@
  * - Reactions are added as comments on the post page.
  */
 import { getNotionClient } from "./client";
+import { alertFailure } from "./alerts";
 import type { NotionConfig } from "./types";
 import type { Question } from "@/lib/questions/sets";
 
@@ -150,6 +151,7 @@ async function writeAnswersToAsks(
   const today = new Date().toISOString().slice(0, 10);
   let firstId: string | null = null;
   let touched = 0;
+  const failedRows: string[] = [];
 
   for (const q of input.questions) {
     const a = input.answers[q.id];
@@ -178,7 +180,13 @@ async function writeAnswersToAsks(
       touched++;
     } catch (err) {
       console.warn(`[notion:asks] upsert failed for "${q.id}"`, err);
+      failedRows.push(`"${q.prompt.slice(0, 80)}": ${err instanceof Error ? err.message : String(err)}`);
     }
+  }
+
+  if (failedRows.length) {
+    // The client's answer text is lost if we drop it silently — page Thomas.
+    await alertFailure(`Asks write-back (${input.clientName}, ${input.setLabel})`, failedRows);
   }
 
   if (touched > 0) {
@@ -255,6 +263,11 @@ export async function writeAnswersToNotion(
     return { pageId: page.id };
   } catch (err) {
     console.warn("[notion:answers] write failed", err);
+    // Neither Asks nor legacy landed — the submission exists nowhere in Notion.
+    await alertFailure(`Answers write-back (${input.clientName}, ${input.setLabel})`, [
+      `no path succeeded: ${err instanceof Error ? err.message : String(err)}`,
+      `answers: ${Object.entries(input.answers).map(([k, v]) => `${k}=${v.slice(0, 60)}`).join(" | ").slice(0, 1500)}`,
+    ]);
     return null;
   }
 }

@@ -70,3 +70,23 @@ them. File split: docs/BRIEF-tree-read-models.md §"File split".
 3. Plumbing now building: Asks write-back in `src/lib/notion/answers.ts`
    (my file) — share-link answers upsert into the Asks db. Asks schema stays
    frozen as per HANDOFF §4.1.
+
+## Plumbing session (Nov 14, evening) — alerting shipped (code, not deployed)
+
+1. **Thomas enabled "Insert comments"** on the integration — the 403 is gone
+   (verified live: plain comment + @mention both land and push).
+2. **New `src/lib/notion/alerts.ts`** (plumbing file): `alertFailure(source,
+   lines)` → one @mention comment per incident on the Waterline page
+   (`NOTION_ALERTS_PAGE_ID` to override; `NOTION_NOTIFY_USER_ID` = Thomas,
+   already in Vercel prod env, now also in .env.local). Never throws.
+3. Wired into: orchestrator cron (failed steps + per-account metrics-sync
+   misses), publish cron (per-post failures + fatal; dry runs don't alert;
+   no double-alert when orchestrator invokes publish), Asks write-back
+   (failed upserts; total-failure alert includes the answer text so nothing
+   is silently lost).
+4. **Nothing newly deployed** — prod is still the Nov 11 build by Thomas's
+   choice; all Nov 12–14 work ships in one approved deploy later. Branch
+   `task/CT-tree-read-models` is now pushed to origin as backup.
+5. Pre-existing breakage noticed (not mine, not touched): tsc error in
+   `src/lib/notion/calls.ts:209` (TS7022), and
+   `__tests__/lib/notion/service.test.ts` imports a missing `../service`.
