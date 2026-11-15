@@ -18,6 +18,13 @@ import { getPosts as getNotionPosts } from "@/lib/notion";
 import { getTree, markPrimaryNiche } from "@/lib/notion/tree";
 import { getCalls } from "@/lib/notion/calls";
 import type { NotionConfig } from "@/lib/notion/types";
+import {
+  classifyPostKind,
+  findSilentNodes,
+  indexNotionByLink,
+  storyVsListingRatio,
+  summarizeByKind,
+} from "./summarize";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyAccount = any;
@@ -74,7 +81,7 @@ export function registerReadTools(server: McpServer) {
     {
       title: "Get post metrics",
       description:
-        "Published Instagram posts with metrics (reach, likes, comments, saves…) from the nightly sync, most recent first, plus account-level counts. Use this for \"how are the posts doing?\".",
+        "Published Instagram posts with metrics (reach, likes, comments, saves…) from the nightly sync, most recent first, plus account-level counts. Each post has kind story | listing | other (story = linked to a Story in Notion; otherwise from the AI classifier; kindSource says which). byKind averages cover ALL synced posts, not just the returned page; storyVsListing is story avg reach ÷ listing avg reach. Use this for \"how are the posts doing?\".",
       inputSchema: z.object({
         accountId: accountIdArg,
         limit: z.number().int().min(1).max(100).default(25).describe("Max posts to return"),
@@ -82,19 +89,48 @@ export function registerReadTools(server: McpServer) {
     },
     async ({ accountId, limit }) => {
       try {
-        const [posts, stats] = await Promise.all([
-          getIgPosts(accountId, { limit }),
+        const account = (await getAccountById(accountId)) as AnyAccount;
+        if (!account) return fail(`Account "${accountId}" not found — use list_accounts for valid ids`);
+        const notion = account.notion as NotionConfig | undefined;
+
+        // All synced posts (summary must cover everything, not just the page);
+        // Notion posts only to learn which ones are linked to a Story.
+        // Notion failing degrades to classifier-only kinds instead of erroring.
+        let notionWarning: string | undefined;
+        const [all, stats, notionPosts] = await Promise.all([
+          getIgPosts(accountId),
           getPostStats(accountId),
+          notion?.postsDataSourceId
+            ? getNotionPosts(notion).catch((e: unknown) => {
+                notionWarning = `Notion posts unavailable (${e instanceof Error ? e.message : "error"}) — kinds from classifier only`;
+                return [];
+              })
+            : Promise.resolve([]),
         ]);
+        const byLink = indexNotionByLink(notionPosts);
+        const withKind = all.map((p) => ({
+          p,
+          ...classifyPostKind(
+            { permalink: p.permalink, contentType: p.classification?.contentType },
+            byLink
+          ),
+        }));
+        const byKind = summarizeByKind(withKind.map((x) => ({ kind: x.kind, metrics: x.p.metrics })));
+
         return json({
           stats,
-          posts: posts.map((p) => ({
+          byKind,
+          storyVsListing: storyVsListingRatio(byKind),
+          ...(notionWarning ? { warning: notionWarning } : {}),
+          posts: withKind.slice(0, limit).map(({ p, kind, kindSource }) => ({
             instagramId: p.instagramId,
             postedAt: p.postedAt,
             mediaType: p.mediaType,
             caption: p.caption?.slice(0, 160),
             permalink: p.permalink,
             metrics: p.metrics,
+            kind,
+            kindSource,
             niche: p.niche,
             contentType: p.classification?.contentType,
           })),
@@ -110,7 +146,7 @@ export function registerReadTools(server: McpServer) {
     {
       title: "Get situation tree",
       description:
-        "The client's situation tree from Notion: every node with level, status (Untested/Testing/Working/Dropped), parent/child links, evidence counts, and the primary-niche flag. The tree is a forest — multiple roots. Use this for \"what's covered / what's still silent?\".",
+        "The client's situation tree from Notion: every node with level, status (Untested/Testing/Working/Dropped), parent/child links, evidence counts, and the primary-niche flag. The tree is a forest — multiple roots. silentNodes lists testable nodes (not Structure, not Dropped) with no posts and no stories, primary-niche branch first. Use this for \"what's covered / what's still silent?\".",
       inputSchema: z.object({ accountId: accountIdArg }),
     },
     async ({ accountId }) => {
@@ -120,6 +156,7 @@ export function registerReadTools(server: McpServer) {
         return json({
           count: nodes.length,
           primaryNiche: account.primaryNiche,
+          silentNodes: findSilentNodes(nodes),
           nodes: nodes.map((n) => ({
             ...n,
             // counts read better in chat than bare relation-id arrays
@@ -178,7 +215,7 @@ export function registerReadTools(server: McpServer) {
     {
       title: "Get upcoming posts",
       description:
-        "Content pipeline from Notion: posts that are Approved, Scheduled, or in review, with post dates and slide counts. Visibility only — nothing here can schedule or publish.",
+        "Content pipeline from Notion: every post not yet Posted or Archived (Idea → Draft → Ready for review → Approved → Scheduled), with status, post date and slide count. Visibility only — nothing here can schedule or publish.",
       inputSchema: z.object({ accountId: accountIdArg }),
     },
     async ({ accountId }) => {

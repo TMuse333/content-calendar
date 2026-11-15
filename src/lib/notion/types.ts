@@ -160,6 +160,9 @@ export interface NotionPost {
   answerCheck?: boolean;                // Does it answer the question?
   igPostLink?: string;                  // Instagram post URL (JOIN KEY!)
 
+  // Waterline relations (post-Nov 5 Posts schema)
+  storyIds?: string[];                  // Relation to Stories — set ⇒ a story post
+
   // Metadata
   createdAt?: Date;
   updatedAt?: Date;
