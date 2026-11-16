@@ -229,6 +229,7 @@ function parsePost(page: unknown): NotionPost {
     successMetric: extractSelect(props["Success metric"]),
     answerCheck: extractCheckbox(props["Answer check"]),
     igPostLink: extractUrl(props["IG post link"]),
+    storyIds: extractRelation(props["Story"] ?? props["Stories"]),
     createdAt: p.created_time ? new Date(p.created_time) : undefined,
     updatedAt: p.last_edited_time ? new Date(p.last_edited_time) : undefined,
   };
