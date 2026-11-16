@@ -35,13 +35,17 @@ export default function SharePage() {
   const reactionsKey = `share-reactions:${code}`;
 
   // Dev-only sandbox: click through everything, save nothing (?sandbox=1).
+  // Admin preview (?preview=1) behaves the same — buttons are live-looking
+  // but nothing is sent, so an accidental tap can't approve a post.
   const [sandbox, setSandbox] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
 
   useEffect(() => {
     const qp = new URLSearchParams(window.location.search);
     const preview = qp.get("preview") === "1";
     const sandboxed = process.env.NODE_ENV === "development" && qp.get("sandbox") === "1";
-    setSandbox(sandboxed);
+    setSandbox(sandboxed || preview);
+    setPreviewMode(preview);
     fetch(`/api/share/${code}${preview || sandboxed ? "?preview=1" : ""}`)
       .then(async (r) => {
         const j = await r.json();
@@ -49,7 +53,7 @@ export default function SharePage() {
         setData(j);
       })
       .catch((e) => setLoadError(e.message || "This link isn't working."));
-    if (sandboxed) return; // fresh run every time, no saved progress
+    if (sandboxed || preview) return; // fresh run every time, no saved progress
     try {
       const savedAnswers = localStorage.getItem(draftKey);
       if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
@@ -180,6 +184,7 @@ export default function SharePage() {
               onReacted={recordReaction}
               onNext={() => {}}
               showNext={false}
+              sandbox={sandbox}
             />
           ))}
 
@@ -271,7 +276,9 @@ export default function SharePage() {
       <div className="max-w-xl mx-auto px-4 py-6 pb-16">
         {sandbox && (
           <p className="mb-4 text-center text-xs font-medium text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg py-1.5">
-            Sandbox — nothing you tap here is saved
+            {previewMode
+              ? "Admin preview — taps are disabled, nothing is saved or sent"
+              : "Sandbox — nothing you tap here is saved"}
           </p>
         )}
         {/* Top bar: back, progress, see-all */}

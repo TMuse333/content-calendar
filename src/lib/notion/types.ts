@@ -160,6 +160,9 @@ export interface NotionPost {
   answerCheck?: boolean;                // Does it answer the question?
   igPostLink?: string;                  // Instagram post URL (JOIN KEY!)
 
+  // Waterline relations (post-Nov 5 Posts schema)
+  storyIds?: string[];                  // Relation to Stories — set ⇒ a story post
+
   // Metadata
   createdAt?: Date;
   updatedAt?: Date;
@@ -185,6 +188,10 @@ export interface NotionConfig {
   postsDataSourceId: string;            // Posts collection:// URL
   topicsDataSourceId: string;           // Topics collection:// URL
   feedbackDataSourceId?: string;        // Feedback collection:// URL (client "Request changes" comments)
+  // Waterline situation-tree model (optional overrides; readers discover by title otherwise).
+  treeDataSourceId?: string;            // Tree collection:// URL (per-client situation tree)
+  storiesDataSourceId?: string;         // Stories collection:// URL (client real-case evidence)
+  callsDataSourceId?: string;           // Calls collection:// URL (recorded story calls)
 }
 
 // =============================================================================
