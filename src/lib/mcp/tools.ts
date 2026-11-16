@@ -81,7 +81,7 @@ export function registerReadTools(server: McpServer) {
     {
       title: "Get post metrics",
       description:
-        "Published Instagram posts with metrics (reach, likes, comments, saves…) from the nightly sync, most recent first, plus account-level counts. Each post has kind story | listing | other (story = linked to a Story in Notion; otherwise from the AI classifier; kindSource says which). byKind averages cover ALL synced posts, not just the returned page; storyVsListing is story avg reach ÷ listing avg reach. Use this for \"how are the posts doing?\".",
+        "Published Instagram posts with metrics (reach, likes, comments, saves…) from the nightly sync, most recent first, plus account-level counts. Each post has kind story | listing | other (story = linked to a Story in Notion; listing = Notion Type Listing graphic/video; otherwise from the AI classifier; kindSource says which). byKind averages cover ALL synced posts, not just the returned page; storyVsListing is story avg reach ÷ listing avg reach. Use this for \"how are the posts doing?\".",
       inputSchema: z.object({
         accountId: accountIdArg,
         limit: z.number().int().min(1).max(100).default(25).describe("Max posts to return"),

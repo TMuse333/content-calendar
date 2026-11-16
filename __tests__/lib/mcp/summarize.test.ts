@@ -39,7 +39,13 @@ describe("classifyPostKind", () => {
   const byLink = indexNotionByLink([
     { igPostLink: "https://instagram.com/p/STORY/", storyIds: ["s1"] },
     { igPostLink: "https://instagram.com/p/NOSTORY/", storyIds: [] },
+    { igPostLink: "https://instagram.com/p/LISTING/", storyIds: [], type: "Listing video" },
   ]);
+
+  it("Notion Type Listing graphic/video = listing, beating the classifier", () => {
+    expect(classifyPostKind({ permalink: "https://www.instagram.com/p/LISTING/", contentType: "case-study" }, byLink))
+      .toEqual({ kind: "listing", kindSource: "notion-type" });
+  });
 
   it("a Notion Story link wins over the classifier", () => {
     expect(classifyPostKind({ permalink: "https://instagram.com/p/STORY?x=1", contentType: "showcase" }, byLink))

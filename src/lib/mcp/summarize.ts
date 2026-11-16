@@ -13,10 +13,11 @@ export type PostKind = "story" | "listing" | "other";
 /**
  * Where the kind came from, most to least trustworthy:
  *   notion-story — the Notion post has a Story relation (a real client story)
+ *   notion-type  — no Story link, but Notion Type is "Listing graphic/video"
  *   classifier   — no Story link; fell back to the AI contentType
  *   none         — no signal at all (unclassified, not in Notion)
  */
-export type KindSource = "notion-story" | "classifier" | "none";
+export type KindSource = "notion-story" | "notion-type" | "classifier" | "none";
 
 /** Minimal shapes so the helpers don't depend on the full Mongo/Notion types. */
 export interface KindInput {
@@ -26,6 +27,7 @@ export interface KindInput {
 export interface NotionPostLink {
   igPostLink?: string;
   storyIds?: string[];
+  type?: string;            // Notion "Type" select, e.g. "Listing graphic"
 }
 
 /**
@@ -63,6 +65,7 @@ export function classifyPostKind(
 ): { kind: PostKind; kindSource: KindSource } {
   const notion = notionByLink.get(normLink(post.permalink));
   if (notion?.storyIds?.length) return { kind: "story", kindSource: "notion-story" };
+  if (notion?.type && /^listing\b/i.test(notion.type)) return { kind: "listing", kindSource: "notion-type" };
 
   const fromClassifier = post.contentType ? CLASSIFIER_KIND[post.contentType] : undefined;
   if (fromClassifier) return { kind: fromClassifier, kindSource: "classifier" };
