@@ -113,3 +113,23 @@ them. File split: docs/BRIEF-tree-read-models.md §"File split".
 4. Notion "Insert comments" now enabled; confirmed zero Scheduled posts
    across accounts (nothing armed). Demo account's Posts ds no longer shared
    with the integration (404) — harmless, flagging for cleanup.
+
+## Plumbing session (Nov 15, late) — SHIPPED TO PROD (Thomas's go)
+
+1. PR #1 (claude/strategy-app-connector-p3h9sj) reviewed + merged into
+   task/CT-tree-read-models: story/listing kinds + per-kind averages
+   (live: story 2.2× listing), silentNodes (14 on Greg's tree), shortcode
+   link matching, Story relation parsing, __tests__/lib/mcp (17 tests),
+   scripts/mcp-sanity.ts.
+2. task/CT-tree-read-models merged to main; prod deploy READY — first since
+   Nov 11. Now live: orchestrator cron, alerting, Asks write-back, preview
+   guard, Tree/Calls/Debrief pages, MCP connector (permanent URL
+   strategy.syntellic.ai/api/mcp/<MCP_READ_SECRET>). Smoke-tested.
+3. CONFIRMED root cause of the tree-evidence follow-up: the metrics sync
+   stores SYNTHETIC permalinks (instagram.com/p/<media-id>/, not the real
+   shortcode). Notion↔IG joins can never match — affects MCP kindSource
+   AND tree-evidence node reach. One fix repairs both: sync must request
+   the `permalink` field from the IG API. (Tree session: your uncommitted
+   per-post evidence work will show reach once that lands.)
+4. Your uncommitted WIP (debrief cache, tree page, Sidebar) was left
+   untouched and did NOT ship — commit when ready; next deploy picks it up.
