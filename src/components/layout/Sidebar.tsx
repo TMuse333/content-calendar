@@ -15,7 +15,6 @@ import {
   ExternalLink,
   HardDrive,
   Phone,
-  Sparkles,
   Network,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -108,16 +107,10 @@ export function Sidebar() {
           description: "Story calls & tree coverage",
         },
         {
-          label: "Debrief",
-          href: `${accountBase}/debrief`,
-          icon: Sparkles,
-          description: "Call → coverage + video ideas",
-        },
-        {
           label: "Tree",
           href: `${accountBase}/tree`,
           icon: Network,
-          description: "Situation tree + evidence",
+          description: "Situation tree · overall board + per-call coverage, ideas & analysis",
         },
       ],
     },

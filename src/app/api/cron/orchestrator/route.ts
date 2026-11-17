@@ -38,6 +38,21 @@ export async function GET(req: NextRequest) {
   const origin = req.nextUrl.origin;
   const results: StepResult[] = [];
 
+  // Self-fetches go to this deployment's own URL, which sits behind Vercel's
+  // SSO wall on *.vercel.app hosts. Without the bypass header the wall answers
+  // 200 + an HTML login page — which is how all three steps silently failed on
+  // Nov 16. VERCEL_AUTOMATION_BYPASS_SECRET is auto-injected by Vercel.
+  const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  const selfHeaders: Record<string, string> = bypass ? { "x-vercel-protection-bypass": bypass } : {};
+
+  /** Parse a self-fetch as JSON; an HTML answer (auth wall) is a hard error, never "ok". */
+  const asJson = async (res: Response) => {
+    if (!(res.headers.get("content-type") ?? "").includes("json")) {
+      throw new Error(`HTTP ${res.status} non-JSON response (auth wall?)`);
+    }
+    return res.json();
+  };
+
   const step = async (name: string, fn: () => Promise<unknown>) => {
     try {
       const detail = await fn();
@@ -50,17 +65,17 @@ export async function GET(req: NextRequest) {
   // 1. Publish backstop (same auth, same host)
   await step("publish-scheduled", async () => {
     const res = await fetch(`${origin}/api/cron/publish-scheduled`, {
-      headers: { authorization: `Bearer ${cronSecret}` },
+      headers: { authorization: `Bearer ${cronSecret}`, ...selfHeaders },
     });
-    const body = await res.json();
+    const body = await asJson(res);
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${JSON.stringify(body).slice(0, 300)}`);
     return body;
   });
 
   // 2. Token refresh — all tokens expiring within the route's 7-day window
   await step("token-refresh", async () => {
-    const res = await fetch(`${origin}/api/auth/instagram/refresh`, { method: "POST" });
-    const body = await res.json();
+    const res = await fetch(`${origin}/api/auth/instagram/refresh`, { method: "POST", headers: selfHeaders });
+    const body = await asJson(res);
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${JSON.stringify(body).slice(0, 300)}`);
     return body;
   });
@@ -74,8 +89,9 @@ export async function GET(req: NextRequest) {
       const ig = (account as any).platforms?.instagram;
       if (!ig?.connected || !ig.accessToken) continue;
       try {
-        const res = await fetch(`${origin}/api/accounts/${account.id}/posts/sync`, { method: "POST" });
-        synced[account.id] = res.ok ? "ok" : `HTTP ${res.status}`;
+        const res = await fetch(`${origin}/api/accounts/${account.id}/posts/sync`, { method: "POST", headers: selfHeaders });
+        const isJson = (res.headers.get("content-type") ?? "").includes("json");
+        synced[account.id] = res.ok && isJson ? "ok" : `HTTP ${res.status}${isJson ? "" : " non-JSON (auth wall?)"}`;
       } catch (err) {
         synced[account.id] = err instanceof Error ? err.message : "failed";
       }

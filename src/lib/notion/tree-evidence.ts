@@ -22,11 +22,25 @@ export interface NodeMetrics {
   totalSaves: number;
 }
 
+/** One post training a node — a "test" of the situation, with its result. */
+export interface NodePost {
+  id: string;
+  title: string;
+  status?: string;       // Idea / Scheduled / Posted …
+  format?: string;       // Video format
+  date?: string;         // Post date
+  igPostLink?: string;
+  reach?: number;        // from tracked_posts; undefined until IG synced
+  saves?: number;
+  hasMetrics: boolean;
+}
+
 export interface NodeEvidence extends TreeNode {
   storyCount: number;
   topBreakthrough?: number;   // strongest story on the node (1–5)
   postCount: number;          // posts linked (any)
   metrics: NodeMetrics;       // aggregate IG performance of its posts
+  posts: NodePost[];          // the individual posts (tests) behind the node
 }
 
 const EMPTY: NodeMetrics = { posts: 0, totalReach: 0, avgReach: 0, bestReach: 0, totalSaves: 0 };
@@ -63,10 +77,13 @@ export async function getTreeWithEvidence(
   const breakthroughByStoryId = new Map<string, number>();
   for (const s of stories) if (typeof s.breakthrough === "number") breakthroughByStoryId.set(s.id, s.breakthrough);
 
+  const postById = new Map(posts.map((p) => [p.id, p]));
+
   return nodes.map((n) => {
-    // aggregate IG metrics across this node's posts
+    // aggregate IG metrics across this node's posts + the per-post breakdown
     const reaches: number[] = [];
     let totalSaves = 0;
+    const nodePosts: NodePost[] = [];
     for (const postId of n.postIds) {
       const link = linkByPostId.get(postId);
       const m = link ? metricsByLink.get(link) : undefined;
@@ -74,7 +91,21 @@ export async function getTreeWithEvidence(
         reaches.push(m.reach);
         totalSaves += m.saves;
       }
+      const p = postById.get(postId);
+      nodePosts.push({
+        id: postId,
+        title: p?.title || "(untitled post)",
+        status: p?.status,
+        format: p?.videoFormat ?? undefined,
+        date: p?.postDate ?? undefined,
+        igPostLink: p?.igPostLink || undefined,
+        reach: m?.reach,
+        saves: m?.saves,
+        hasMetrics: !!m,
+      });
     }
+    // strongest tests first: by reach when known, else posted before ideas
+    nodePosts.sort((a, b) => (b.reach ?? -1) - (a.reach ?? -1));
     const totalReach = reaches.reduce((a, b) => a + b, 0);
     const metrics: NodeMetrics = reaches.length
       ? {
@@ -94,6 +125,7 @@ export async function getTreeWithEvidence(
       topBreakthrough: breakthroughs.length ? Math.max(...breakthroughs) : undefined,
       postCount: n.postIds.length,
       metrics,
+      posts: nodePosts,
     };
   });
 }
