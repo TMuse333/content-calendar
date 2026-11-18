@@ -11,13 +11,18 @@
 import { createMcpHandler } from "mcp-handler";
 import { timingSafeEqual } from "crypto";
 import { registerPublishTools } from "@/lib/mcp/publish-tools";
+import { registerStageTools } from "@/lib/mcp/stage-tools";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // slide conversion + IG container processing
 
-const handler = createMcpHandler(registerPublishTools, {
-  serverInfo: { name: "strategy-app-publish", version: "0.1.0" },
-});
+const handler = createMcpHandler(
+  (server) => {
+    registerPublishTools(server);
+    registerStageTools(server); // inbox → stage → share link → schedule
+  },
+  { serverInfo: { name: "strategy-app-publish", version: "0.1.0" } }
+);
 
 function secretOk(given: string): boolean {
   const expected = process.env.PUBLISH_SECRET;
