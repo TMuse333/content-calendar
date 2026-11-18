@@ -133,3 +133,21 @@ them. File split: docs/BRIEF-tree-read-models.md §"File split".
    per-post evidence work will show reach once that lands.)
 4. Your uncommitted WIP (debrief cache, tree page, Sidebar) was left
    untouched and did NOT ship — commit when ready; next deploy picks it up.
+
+## Plumbing session (Nov 17, late) — publish MCP verified, pricing post armed
+
+1. PR #2 (claude.ai session) reviewed post-merge: /api/mcp-publish/[secret]
+   (PUBLISH_SECRET-keyed) with list_publishable / preview_post / publish_post.
+   Design is sound: confirm:true literal, fresh pre-flight blockers (incl.
+   already-posted), Notion write-back failure reports as "posted — fix Notion
+   by hand", never as a retriable error. Smoke-tested live.
+2. Greg: IG reconnected (@silver250, expires Jan 16 2027); 👍 on the new
+   pricing carousel Nov 17 via share link; caption rebuilt, no DM keyword.
+3. **Pricing post armed by Thomas's go: Scheduled, Post date Nov 18 → 15:00
+   UTC cron posts it (~11am Atlantic).** Story "$600k vs $500k" Permission →
+   Anonymous only. Charity-cake story stays Not asked.
+4. Orchestrator cron root-caused + fixed Nov 16→17: self-fetches hit the
+   Vercel SSO wall (HTML 200 read as "ok"); now bypass header + non-JSON =
+   hard error. Verified green in prod. CRON_SECRET rotated (now readable in
+   .env.local). Greg's platforms.instagram was wiped Nov 14 by the old
+   $set-everything seed-greg.ts — reconnect fixed it; guard already in place.
