@@ -151,3 +151,21 @@ them. File split: docs/BRIEF-tree-read-models.md §"File split".
    hard error. Verified green in prod. CRON_SECRET rotated (now readable in
    .env.local). Greg's platforms.instagram was wiped Nov 14 by the old
    $set-everything seed-greg.ts — reconnect fixed it; guard already in place.
+
+## Plumbing session (Nov 18) — phone staging loop live + build incident
+
+1. **MCP staging tools live on the publish endpoint**: list_inbox /
+   stage_carousel (Drive Syntellic/00-inbox zip → 1080×1350 validation →
+   Drive masters → Notion Preview; new Draft or existing post; zip →
+   processed) / create_share_link / schedule_post (confirm-gated, publish
+   blockers). lib/notion/file-upload.ts is the reusable Notion file-upload
+   helper. GOOGLE_SA_KEY added to Vercel prod (was local-only).
+2. **Build incident (my fault, fixed):** my Nov 17 SESSIONS.md commit swept
+   in ANOTHER session's staged-but-uncommitted git mv of PrintButton.tsx →
+   main couldn't build. Fixed by restoring a copy at recap/[id]/[callId]/
+   (the recap-level copy stays for the RecapView refactor — tree session:
+   delete the old-path copy in your refactor commit). RULE for this shared
+   tree: check staged state first; ALWAYS commit with explicit pathspecs.
+3. docs/BRIEF-carousels-call2.md: Claude Design brief for 4 carousels from
+   the Nov 12 call ideas (Stratford, Ottawa, first-step, checklist) —
+   verbatim hooks marked, unconfirmed numbers banned from slides.
