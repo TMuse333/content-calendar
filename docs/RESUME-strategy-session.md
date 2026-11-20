@@ -1,5 +1,48 @@
 # Resume — Strategy session (tree/stories/calls + Debrief + Tree)
 
+## Session update — Nov 18 (recap pipeline)
+
+**Shipped + committed (`1c4115a`):**
+- Tree = call visualizer: merged Debrief into `/account/[id]/tree`. Overall mode
+  (nodes by Status) ↔ per-call mode (nodes by hit/grazed/silent) via the "View"
+  dropdown; right slide-over with Coverage / Ideas / **Analysis** (summary, facts
+  on tape, new stories, still-open); node drawer; drag-to-pan; Fit; hide-quiet
+  toggle. Debrief removed from sidebar (folded in).
+- Debrief Mongo cache (`src/lib/mongodb/debriefs.ts`): GET-first, hash-invalidated;
+  POST computes+caches. Click a call = instant unless miss.
+- `tree-evidence.ts`: per-node `posts[]` (each post = a "test") + aggregate metrics.
+- Client recap export: `/recap/[id]/[callId]` print→PDF page (`RecapView` shared
+  component), each idea traced to its real transcript window (`matchSources` in
+  `src/lib/calls/recap.ts`). "Export recap" button in Tree call-mode.
+
+**Built but NOT committed — recap lifecycle (generate→approve/edit→send):**
+- `src/lib/mongodb/recaps.ts` — `recaps` collection, status draft→approved→sent,
+  `data`+`edits` (merge via `effectiveRecap`), public `token`.
+- Auto-draft on debrief finish (debrief route) + lazy back-fill in inbox.
+- Inbox `/account/[id]/recaps`, editor `/account/[id]/recaps/[callId]` (edit copy +
+  live preview iframe, Approve, Send), Sidebar "Recaps" item.
+- Public link `/r/[token]` (only resolves once approved).
+- Resend email: `src/lib/email/recap-email.ts` (REST via fetch, no SDK),
+  `POST /api/accounts/[id]/recaps/[callId]` {action: edits|approve|send}.
+- Verified locally: draft gated → approve → public link renders; bad email → 400.
+
+**To make a recap actually public / sendable (TODO):**
+1. Commit the recap-lifecycle files above.
+2. `NEXT_PUBLIC_PUBLIC_BASE_URL=https://strategy.syntellic.ai` + use it for the
+   shared/emailed link (editor + email currently use request/window origin).
+3. Resend: verify a sending domain, set `RESEND_API_KEY` + `RECAP_FROM_EMAIL`
+   (local .env.local AND Vercel). Sandbox sender only emails your own address.
+4. Deploy: **only `strategy.syntellic.ai` is public** — all `*.vercel.app` are
+   SSO-locked (`ssoProtection: all_except_custom_domains`). Prod builds from `main`
+   → **Thomas merge gate**. Latest prod deploy = ERROR (fix before shipping).
+5. Share `https://strategy.syntellic.ai/r/<token>` (email optional on top).
+
+**Handoff prompt** for another Claude Code (pick up Nov 12 video ideas → Reels via
+`story-request.ts`) was drafted in chat — not yet saved to a file.
+
+---
+
+
 Branch: `task/CT-tree-read-models`. This is the **strategy lane** (read models +
 coverage/ideas LLM + Debrief + Tree UI). Plumbing lane (other Claude) owns
 `answers.ts`, `src/app/s/`, `drive.ts`, cron, Asks. Video-app + website-agent are

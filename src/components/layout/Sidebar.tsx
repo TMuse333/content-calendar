@@ -16,6 +16,7 @@ import {
   HardDrive,
   Phone,
   Network,
+  Send,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAccount } from "@/contexts/AccountContext";
@@ -111,6 +112,12 @@ export function Sidebar() {
           href: `${accountBase}/tree`,
           icon: Network,
           description: "Situation tree · overall board + per-call coverage, ideas & analysis",
+        },
+        {
+          label: "Recaps",
+          href: `${accountBase}/recaps`,
+          icon: Send,
+          description: "Client recaps · review, approve & send per call",
         },
       ],
     },

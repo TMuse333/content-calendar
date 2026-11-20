@@ -15,6 +15,8 @@ import { getCallTranscript } from "@/lib/notion/calls";
 import { analyzeTranscript } from "@/lib/calls/analyze";
 import { generateVideoIdeas } from "@/lib/calls/ideas";
 import { getDebrief, listDebriefs, saveDebrief, hashTranscript } from "@/lib/mongodb/debriefs";
+import { buildRecap } from "@/lib/calls/recap";
+import { upsertDraft } from "@/lib/mongodb/recaps";
 import type { NotionConfig } from "@/lib/notion/types";
 
 const MODEL = "claude-opus-4-8";
@@ -103,9 +105,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Cache the result per call so reloads are instant (only story calls — i.e. callId).
     if (body.callId) {
-      await saveDebrief({ accountId: id, callId: body.callId, transcriptHash, analysis, ideas, model: MODEL }).catch(
-        (e) => console.warn("[api:debrief] cache save failed", e)
+      const callId = body.callId;
+      await saveDebrief({ accountId: id, callId, transcriptHash, analysis, ideas, model: MODEL }).catch((e) =>
+        console.warn("[api:debrief] cache save failed", e)
       );
+      // Generate step: stage a draft client recap (never touches an approved/sent one).
+      buildRecap(id, callId)
+        .then((r) => (r.ok ? upsertDraft(id, callId, r.data) : undefined))
+        .catch((e) => console.warn("[api:debrief] recap draft failed", e));
     }
 
     return NextResponse.json({ analysis, ideas, primaryNiche: account.primaryNiche ?? null, cached: false });

@@ -20,7 +20,7 @@ export interface QuestionSet {
   questions: Question[];
 }
 
-export type QuestionSetId = "content" | "strategy" | "clients" | "carousels" | "from-away";
+export type QuestionSetId = "content" | "strategy" | "clients" | "carousels" | "from-away" | "testimonials";
 
 export const SELLER_QUESTIONS: Question[] = [
   { id: "top-questions", prompt: "What are the top 3 questions sellers asked you this year?", hint: "Exactly how they asked them is perfect.", notionProperty: "Top 3 seller questions" },
@@ -86,6 +86,22 @@ export const FROM_AWAY_QUESTIONS: Question[] = [
   { id: "trades-list", prompt: "Write out your actual list — the electrician, plumber, home inspector, septic guy and carpenter you'd call for your own place.", hint: "First name and trade is plenty. The list itself becomes the slide, in your handwriting if you'll send a photo of it." },
 ];
 
+/**
+ * "testimonials": turn a testimonial Greg forwards into a story post. The
+ * testimonial is the ENDING — these questions recover the beginning and
+ * middle (situation → worry → turning point), which is what makes it a
+ * story instead of a brag. One answered set = one carousel.
+ */
+export const TESTIMONIAL_QUESTIONS: Question[] = [
+  { id: "t-which", prompt: "Of the testimonials you've sent me, which one means the most to you right now — and who's it from, roughly?", hint: "\"The couple from Ontario\" or a first name is plenty.", notionProperty: "Testimonial: which" },
+  { id: "t-situation", prompt: "Rewind to their first call: what was going on for them?", hint: "Moving from away? Selling after 30 years? First home? The starting point is the hook.", notionProperty: "Testimonial: situation" },
+  { id: "t-worry", prompt: "What were they most worried would go wrong?", hint: "The fear is what readers recognize in themselves.", notionProperty: "Testimonial: worry" },
+  { id: "t-turning", prompt: "What's the moment it turned around — something you did, said, or caught?", hint: "The part another agent might have missed.", notionProperty: "Testimonial: turning point" },
+  { id: "t-result", prompt: "How did it end up for them — where are they now?", notionProperty: "Testimonial: result" },
+  { id: "t-permission", prompt: "Can we put their first name and their words on the post, or keep it anonymous?", hint: "Anonymous still works — \"a seller in Summerside\" is plenty. If they'd be happy to be tagged, even better.", notionProperty: "Testimonial: permission" },
+  { id: "t-more", prompt: "Any other testimonials worth doing this for? Paste or forward them and I'll queue them up.", notionProperty: "Testimonial: more" },
+];
+
 export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
   content: {
     id: "content",
@@ -116,6 +132,12 @@ export const QUESTION_SETS: Record<QuestionSetId, QuestionSet> = {
     label: "From-away carousels: 5 things to fill in",
     intro: "Five answers finish the \"buying on PEI from away\" posts — what you write goes straight onto the slides. A line or two each is plenty.",
     questions: FROM_AWAY_QUESTIONS,
+  },
+  testimonials: {
+    id: "testimonials",
+    label: "The story behind a testimonial",
+    intro: "The testimonials you've been sending are gold — a testimonial with its story attached is the best-performing post format you have. Pick one and answer a few quick questions about how it started. Short answers or a voice note are perfect; skip any you want.",
+    questions: TESTIMONIAL_QUESTIONS,
   },
 };
 
