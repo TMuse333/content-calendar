@@ -33,6 +33,8 @@ vi.mock("@/lib/notion", () => ({
 }));
 vi.mock("@/lib/notion/client", () => ({ getNotionClient: () => ({ pages: { update: (...a: unknown[]) => pagesUpdate(...a) } }) }));
 vi.mock("@/lib/publish/instagram", () => ({ publishSlidesToInstagram: (...a: unknown[]) => publishSlides(...a) }));
+const syncPosts = vi.fn();
+vi.mock("@/lib/sync/instagram-posts", () => ({ syncAccountPosts: (...a: unknown[]) => syncPosts(...a) }));
 
 import { registerPublishTools, publishBlockers } from "@/lib/mcp/publish-tools";
 
@@ -75,8 +77,8 @@ describe("publishBlockers", () => {
 });
 
 describe("MCP publish tools", () => {
-  it("registers exactly three tools", () => {
-    expect([...handlers.keys()].sort()).toEqual(["list_publishable", "preview_post", "publish_post"]);
+  it("registers exactly four tools", () => {
+    expect([...handlers.keys()].sort()).toEqual(["list_publishable", "preview_post", "publish_post", "sync_metrics"]);
   });
 
   it("list_publishable: only Approved/Scheduled and not yet posted", async () => {
@@ -136,5 +138,21 @@ describe("MCP publish tools", () => {
     expect(res.isError).toBe(true);
     expect(text).toMatch(/Carousel container failed/);
     expect(updatePostStatus).not.toHaveBeenCalled();
+  });
+
+  it("sync_metrics: runs the shared sync and reports counts, never publishes", async () => {
+    syncPosts.mockResolvedValueOnce({ synced: 82, new: 3 });
+    const { data } = await call("sync_metrics", { accountId: "greg-caseley", limit: 10 });
+    expect(data).toEqual({ synced: 82, new: 3 });
+    expect(syncPosts).toHaveBeenCalledWith("greg-caseley", { limit: 10 });
+    expect(publishSlides).not.toHaveBeenCalled();
+    expect(updatePostStatus).not.toHaveBeenCalled();
+  });
+
+  it("sync_metrics: errors come back as a clear tool error", async () => {
+    syncPosts.mockRejectedValueOnce(new Error("Instagram not connected for this account"));
+    const { res, text } = await call("sync_metrics", { accountId: "greg-caseley" });
+    expect(res.isError).toBe(true);
+    expect(text).toMatch(/not connected/);
   });
 });
