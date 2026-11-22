@@ -11,6 +11,8 @@
  *   - No scheduling, editing, or deleting of anything.
  *   - No credentials in any output.
  *   - Same publish chain as the manual button and the cron (lib/publish/instagram).
+ *   - sync_metrics only refreshes reach/likes from Instagram into Mongo — it
+ *     never posts or touches Notion. Lives here because it calls Instagram.
  */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/server";
@@ -19,6 +21,7 @@ import { getPosts, getPostById, updatePostStatus } from "@/lib/notion";
 import { getNotionClient } from "@/lib/notion/client";
 import { publishSlidesToInstagram, type IgTarget } from "@/lib/publish/instagram";
 import type { NotionConfig } from "@/lib/notion/types";
+import { syncAccountPosts } from "@/lib/sync/instagram-posts";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyAccount = any;
@@ -201,4 +204,25 @@ export function registerPublishTools(server: McpServer) {
       return json({ published: true, title: post.title, permalink, mediaId, notionUpdated, ...(warning ? { warning } : {}) });
     }
   );
+  server.registerTool(
+    "sync_metrics",
+    {
+      title: "Sync Instagram metrics now",
+      description:
+        "Pulls fresh reach/likes/saves for an account's posts from Instagram into the app (same as the Sync button / nightly job). Use before reading get_post_metrics when the user wants up-to-the-minute numbers or a post is missing. Never posts or edits anything.",
+      inputSchema: z.object({
+        accountId: accountIdArg,
+        limit: z.number().int().min(1).max(100).optional().describe("Only the N most recent posts (faster). Omit for all."),
+      }),
+    },
+    async ({ accountId, limit }) => {
+      try {
+        const result = await syncAccountPosts(accountId, { limit });
+        return json({ synced: result.synced, new: result.new });
+      } catch (err) {
+        return fail(err instanceof Error ? err.message : "Sync failed");
+      }
+    }
+  );
+
 }
