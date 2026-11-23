@@ -14,12 +14,15 @@ import {
 } from "@/lib/mongodb/share-links";
 import { buildShareLink } from "@/lib/share/links";
 import { isQuestionSetId } from "@/lib/questions/sets";
+import { publicBaseUrl } from "@/lib/urls";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
-function baseUrl(req: NextRequest) {
-  return process.env.NEXTAUTH_URL || req.nextUrl.origin;
+// Client-facing links always on the custom domain, never the request origin
+// (SSO-walled *.vercel.app links are dead for clients).
+function baseUrl(_req: NextRequest) {
+  return publicBaseUrl();
 }
 
 export async function GET(req: NextRequest, { params }: Params) {

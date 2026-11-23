@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAccountById } from "@/lib/mongodb/accounts";
 import { upsertPosts } from "@/lib/mongodb/posts";
 import { fetchPostInsights } from "@/lib/platforms/instagram";
+import { sendNotification } from "@/lib/notify";
 import type { Post } from "@/lib/types/post";
 
 export const dynamic = "force-dynamic";
@@ -109,6 +110,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Upsert to database
     const syncResult = await upsertPosts(posts);
+
+    await sendNotification({
+      accountId: id,
+      event: "metrics.synced",
+      data: { synced: syncResult.synced, new: syncResult.new },
+    });
 
     return NextResponse.json({
       success: true,

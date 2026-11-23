@@ -27,6 +27,7 @@ import { uploadFileToNotion, setFilesProperty } from "@/lib/notion/file-upload";
 import { buildShareLink } from "@/lib/share/links";
 import { insertShareLink } from "@/lib/mongodb/share-links";
 import { publishBlockers, slidesOf } from "./publish-tools";
+import { sendNotification } from "@/lib/notify";
 import type { NotionConfig } from "@/lib/notion/types";
 
 const SYNTELLIC_ROOT = "1fFF2gLOvCRsvrknhHDQGkCYQSPaglBuU"; // Shared Drive › Syntellic
@@ -173,6 +174,11 @@ export function registerStageTools(server: McpServer) {
         await getDrive().files.update({ fileId: zip.id, addParents: processed, removeParents: inbox, supportsAllDrives: true });
 
         const post = await getPostById(notion, targetId!);
+        await sendNotification({
+          accountId,
+          event: "carousel.staged",
+          data: { title: post?.title ?? title ?? slug, postId: targetId, slides: slides.length, zip: zip.name, created },
+        });
         return json({
           staged: true,
           zip: zip.name,
@@ -217,6 +223,37 @@ export function registerStageTools(server: McpServer) {
   );
 
   server.registerTool(
+    "propose_set",
+    {
+      title: "Propose a content set to the client",
+      description:
+        "Creates a share link for the series AND sends ONE content.proposed email via notify (the permanent propose step — no manual link texting). ALWAYS dry-run first (dryRun:true routes the email to the operator); only send with dryRun:false after the operator's explicit GO. Re-running with the returned shareCode reuses the link and cannot double-email (idempotencyKey = share code).",
+      inputSchema: z.object({
+        accountId: z.string(),
+        postIds: z.array(z.string()).optional().describe("Posts in the series (omit when shareCode is given)"),
+        shareCode: z.string().optional().describe("Reuse an existing share link, e.g. the real send after a dry run"),
+        title: z.string().describe('Series name shown in the email, e.g. "From-away series"'),
+        kind: z.string().default("carousels"),
+        message: z.string().optional().describe("Short note shown at the top of the share page"),
+        expiresInDays: z.number().int().min(1).max(60).default(14),
+        callId: z.string().optional().describe("Call the series traces to (lineage)"),
+        dryRun: z.boolean().default(true).describe("true = email the operator, not the client"),
+      }),
+    },
+    async (input) => {
+      try {
+        await requireNotion(input.accountId);
+        const { proposeContentSet } = await import("@/lib/share/propose");
+        const result = await proposeContentSet(input);
+        if ("error" in result) return fail(result.error);
+        return json(result);
+      } catch (err) {
+        return fail(err instanceof Error ? err.message : "Propose failed");
+      }
+    }
+  );
+
+  server.registerTool(
     "schedule_post",
     {
       title: "Schedule a post (arms auto-publish)",
@@ -243,6 +280,11 @@ export function registerStageTools(server: McpServer) {
           properties: { "Post date": { date: { start: date } } },
         });
         await updatePostStatus(notion, postId, "Scheduled");
+        await sendNotification({
+          accountId,
+          event: "post.scheduled",
+          data: { title: post.title, postId, date, slides: slidesOf(post).length, via: "mcp" },
+        });
         return json({
           scheduled: true,
           title: post.title,

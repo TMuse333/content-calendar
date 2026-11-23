@@ -22,6 +22,7 @@ import { getAccountById } from "@/lib/mongodb/accounts";
 import { getPostById, updatePostStatus } from "@/lib/notion";
 import { getNotionClient } from "@/lib/notion/client";
 import { graphHost } from "@/lib/platforms/ig-graph";
+import { sendNotification } from "@/lib/notify";
 import type { NotionConfig } from "@/lib/notion/types";
 
 export const dynamic = "force-dynamic";
@@ -177,6 +178,19 @@ export async function POST(req: NextRequest, { params }: Params) {
       });
     }
 
+    await sendNotification({
+      accountId: id,
+      event: "post.published",
+      data: {
+        title: post.title,
+        permalink,
+        kind: "carousel",
+        postId,
+        via: "manual",
+        ...(igAccount!.id !== id ? { safeTestOnIg: igAccount!.id } : {}),
+      },
+    });
+
     return NextResponse.json({
       success: true,
       mediaId: published.id,
@@ -187,6 +201,12 @@ export async function POST(req: NextRequest, { params }: Params) {
   } catch (error) {
     console.error("[api:posts:publish]", error);
     const message = error instanceof Error ? error.message : "Publish failed";
+    const { id: accountId, postId } = await params;
+    await sendNotification({
+      accountId,
+      event: "post.publish_failed",
+      data: { postId, error: message, via: "manual" },
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

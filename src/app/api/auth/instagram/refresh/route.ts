@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 import { refreshIgLoginToken } from "@/lib/platforms/ig-login";
+import { sendNotification } from "@/lib/notify";
 
 interface RefreshResult {
   accountId: string;
@@ -176,6 +177,16 @@ export async function POST(request: NextRequest) {
     }
 
     await client.close();
+
+    for (const r of results) {
+      if (!r.success) {
+        await sendNotification({
+          accountId: r.accountId,
+          event: "ig.token_refresh_failed",
+          data: { error: r.error ?? "unknown" },
+        });
+      }
+    }
 
     const successCount = results.filter((r) => r.success).length;
 

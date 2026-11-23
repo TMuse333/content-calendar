@@ -18,6 +18,7 @@ import { getAccountById } from "@/lib/mongodb/accounts";
 import { getPosts, getPostById, updatePostStatus } from "@/lib/notion";
 import { getNotionClient } from "@/lib/notion/client";
 import { publishSlidesToInstagram, type IgTarget } from "@/lib/publish/instagram";
+import { sendNotification } from "@/lib/notify";
 import type { NotionConfig } from "@/lib/notion/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -177,8 +178,14 @@ export function registerPublishTools(server: McpServer) {
           blobPrefix: `mcp/${accountId}/${postId}`,
         }));
       } catch (err) {
+        const error = err instanceof Error ? err.message : "unknown error";
+        await sendNotification({
+          accountId,
+          event: "post.publish_failed",
+          data: { title: post.title, postId, error, via: "mcp" },
+        });
         return fail(
-          `Instagram publish failed: ${err instanceof Error ? err.message : "unknown error"}. Do not retry blindly — check the account first.`
+          `Instagram publish failed: ${error}. Do not retry blindly — check the account first.`
         );
       }
 
@@ -197,6 +204,12 @@ export function registerPublishTools(server: McpServer) {
         notionUpdated = false;
         warning = `Posted, but Notion write-back failed (${err instanceof Error ? err.message : "error"}). Set Status=Posted and the IG link by hand so the cron never re-posts it.`;
       }
+
+      await sendNotification({
+        accountId,
+        event: "post.published",
+        data: { title: post.title, permalink, kind: "carousel", postId, via: "mcp" },
+      });
 
       return json({ published: true, title: post.title, permalink, mediaId, notionUpdated, ...(warning ? { warning } : {}) });
     }

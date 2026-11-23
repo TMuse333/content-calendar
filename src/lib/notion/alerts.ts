@@ -9,6 +9,7 @@
  *   NOTION_NOTIFY_USER_ID  — who to @mention (no mention → no push, comment only)
  */
 import { getNotionClient } from "./client";
+import { sendNotification } from "@/lib/notify";
 
 const WATERLINE_PAGE_ID = "40f08d8fd60281ddbacdd90132082d29";
 
@@ -25,6 +26,17 @@ function mention(): unknown[] {
  */
 export async function alertFailure(source: string, lines: string[]): Promise<boolean> {
   if (lines.length === 0) return true;
+
+  // Dual-emit to the notify gateway (cron.step_failed requires an
+  // idempotencyKey — crons retry). The Notion comment below stays until the
+  // notify pipe is proven in production.
+  await sendNotification({
+    accountId: "syntellic",
+    event: "cron.step_failed",
+    data: { source, failures: lines },
+    idempotencyKey: `${source}:${lines[0] ?? ""}:${new Date().toISOString().slice(0, 10)}`,
+  });
+
   const pageId = process.env.NOTION_ALERTS_PAGE_ID ?? WATERLINE_PAGE_ID;
   const body = [
     `⚠️ ${source} — ${lines.length} failure${lines.length === 1 ? "" : "s"}:`,

@@ -20,6 +20,7 @@ import { getPosts, updatePostStatus } from "@/lib/notion";
 import { getNotionClient } from "@/lib/notion/client";
 import { publishSlidesToInstagram, type IgTarget } from "@/lib/publish/instagram";
 import { alertFailure } from "@/lib/notion/alerts";
+import { sendNotification } from "@/lib/notify";
 import type { NotionConfig } from "@/lib/notion/types";
 
 export const dynamic = "force-dynamic";
@@ -141,10 +142,20 @@ export async function GET(req: NextRequest) {
             permalink,
           });
           console.log(`[cron:publish] ${account.id} "${post.title}" → ${permalink}`);
+          await sendNotification({
+            accountId: account.id,
+            event: "post.published",
+            data: { title: post.title, permalink, kind: "carousel", postId: post.id, via: "cron" },
+          });
         } catch (e) {
           const error = e instanceof Error ? e.message : "Publish failed";
           results.push({ accountId: account.id, postId: post.id, title: post.title, error });
           console.error(`[cron:publish] ${account.id} "${post.title}" failed: ${error}`);
+          await sendNotification({
+            accountId: account.id,
+            event: "post.publish_failed",
+            data: { title: post.title, postId: post.id, error, via: "cron" },
+          });
         }
       }
     }

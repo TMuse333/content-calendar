@@ -12,6 +12,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRecap, saveEdits, approveRecap, markSent, effectiveRecap } from "@/lib/mongodb/recaps";
 import { sendRecapEmail } from "@/lib/email/recap-email";
+import { sendNotification } from "@/lib/notify";
+import { publicBaseUrl } from "@/lib/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -59,9 +61,37 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "A valid recipient email is required." }, { status: 400 });
       }
       const data = effectiveRecap(doc);
-      const link = `${req.nextUrl.origin}/r/${doc.token}`;
-      const sent = await sendRecapEmail({ to, clientName: data.client, callTitle: data.callTitle, link });
-      if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: 502 });
+      // Client links always on the custom domain — *.vercel.app is SSO-walled.
+      const link = `${publicBaseUrl()}/r/${doc.token}`;
+      const recapEvent = {
+        accountId: id,
+        event: "recap.sent",
+        data: { to, clientName: data.client, callTitle: data.callTitle, link },
+        lineage: { callId },
+      };
+
+      if (["1", "true"].includes(process.env.RECAP_VIA_NOTIFY ?? "")) {
+        // Delivery through notify's verified sender; notify renders the
+        // client email itself. Hard-fail (don't markSent) if it didn't send.
+        const res = await sendNotification({
+          ...recapEvent,
+          visibility: "client",
+          to: { email: to },
+          channels: ["email"],
+        });
+        if (!res.ok || res.status !== "sent") {
+          return NextResponse.json(
+            { error: `notify delivery failed: ${res.error ?? res.status ?? "unknown"}` },
+            { status: 502 }
+          );
+        }
+      } else {
+        const sent = await sendRecapEmail({ to, clientName: data.client, callTitle: data.callTitle, link });
+        if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: 502 });
+        // Direct path: still emit recap.sent, but forced internal — the client
+        // already got the Resend email; notify must not send a second one.
+        await sendNotification({ ...recapEvent, visibility: "internal" });
+      }
       await markSent(id, callId, to);
       return NextResponse.json({ ok: true, status: "sent", to });
     }
