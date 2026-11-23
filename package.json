@@ -15,7 +15,6 @@
     "@modelcontextprotocol/server": "^2.4.0",
     "@notionhq/client": "^5.27.1",
     "@vercel/blob": "^2.8.1",
-    "@xyflow/react": "^12.12.1",
     "fflate": "^0.8.3",
     "googleapis": "^178.0.0",
     "lucide-react": "^1.45.0",
