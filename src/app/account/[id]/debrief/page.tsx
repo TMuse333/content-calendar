@@ -37,7 +37,9 @@ interface IdeaHook {
 }
 interface VideoIdea {
   node: string;
+  nodeId?: string;
   lens: string;
+  form?: "video" | "carousel"; // older cached debriefs predate the field
   angle: string;
   suggestedFormat: string;
   hooks: IdeaHook[];
@@ -445,6 +447,9 @@ function IdeaCard({ idea }: { idea: VideoIdea }) {
         {idea.isPrimaryNiche && <span className="text-cyan-400">★ edge</span>}
         <span>· {idea.lens}</span>
         <span>· {idea.suggestedFormat}</span>
+        {idea.form === "carousel" && (
+          <span className="text-fuchsia-400 border border-fuchsia-500/40 rounded px-1">carousel</span>
+        )}
       </div>
       <p className="text-sm text-zinc-100 font-medium mt-1">{idea.angle}</p>
       <p className="text-xs text-zinc-400 mt-1">

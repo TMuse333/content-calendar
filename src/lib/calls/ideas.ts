@@ -25,9 +25,13 @@ export interface IdeaHook {
   preferred: boolean;     // the one we'd render by default
 }
 
+export type IdeaForm = "video" | "carousel";
+
 export interface VideoIdea {
   node: string;
+  nodeId?: string;              // resolved tree-node page id (exact-name match)
   lens: string;
+  form: IdeaForm;               // what gets made: a rendered video or an IG carousel
   angle: string;
   suggestedFormat: string;      // advisory; the renderer may override
   hooks: IdeaHook[];
@@ -48,12 +52,13 @@ const IDEAS_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["node", "lens", "angle", "suggestedFormat", "hooks", "beliefBefore", "beliefAfter", "factsToConfirm", "isPrimaryNiche"],
+        required: ["node", "lens", "form", "angle", "suggestedFormat", "hooks", "beliefBefore", "beliefAfter", "factsToConfirm", "isPrimaryNiche"],
         properties: {
           node: { type: "string", description: "The tree node this trains (exact name from the list)" },
           lens: { type: "string", enum: ["Who", "What", "When", "Where", "Why", "How", "How much", "What if"] },
-          angle: { type: "string", description: "One-line premise of the video" },
-          suggestedFormat: { type: "string", enum: ["talking-head", "kinetic", "listing", "explainer"] },
+          form: { type: "string", enum: ["video", "carousel"], description: "video = rendered talking video; carousel = IG slide carousel (cover hook + step slides)" },
+          angle: { type: "string", description: "One-line premise of the piece" },
+          suggestedFormat: { type: "string", enum: ["talking-head", "kinetic", "listing", "explainer", "carousel"] },
           hooks: {
             type: "array",
             items: {
@@ -132,10 +137,11 @@ export async function generateVideoIdeas(
     messages: [
       {
         role: "user",
-        content: `You turn a real-estate agent's story-call transcript into VIDEO IDEAS to show the agent as a recap ("based on our last call, here's what we can make").
+        content: `You turn a real-estate agent's story-call transcript into CONTENT IDEAS to show the agent as a recap ("based on our last call, here's what we can make").
 
 Rules:
 - Each idea trains ONE tree node (use the exact node name) through ONE lens (the uncertainty it answers).
+- Each idea has a form: "video" (rendered short video) or "carousel" (IG slide carousel — a cover-slide hook plus 4–8 step/story slides). Propose a MIX of both forms; pick whichever fits the material (step-by-step / numbers / checklists → carousel; story / personality / reassurance → video). For carousels set suggestedFormat to "carousel".
 - ${edge ? `The PRIMARY NICHE is "${edge.name}" — his strongest edge. Lead with it: make it the first ideas and more of them.` : "Prioritise nodes that were substantively discussed."}
 - Give exactly 3 hooks per idea, each a DIFFERENT style, and mark one preferred.
 - Hook type matters: a "spoken" hook MUST be a line the agent ACTUALLY said — quote it verbatim from the transcript. If you can't find a real line, make it a "card" (producer-written overlay framing) instead. Never put invented words in his mouth as spoken.
@@ -155,5 +161,9 @@ ${transcript}`,
   const text = response.content.find((b) => b.type === "text");
   if (!text || text.type !== "text") throw new Error("No ideas output");
   const parsed = JSON.parse(text.text) as { ideas: VideoIdea[] };
-  return validateHooks(parsed.ideas ?? [], transcript);
+  const byName = new Map(targets.map((n) => [n.name, n.id]));
+  return validateHooks(parsed.ideas ?? [], transcript).map((idea) => ({
+    ...idea,
+    nodeId: byName.get(idea.node),
+  }));
 }
