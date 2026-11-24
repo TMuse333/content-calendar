@@ -108,10 +108,15 @@ export default function CallsPage() {
     setStatus("analyzing");
     setError("");
     try {
-      const res = await fetch(`/api/accounts/${accountId}/calls/analyze`, {
+      // Intake = Call row + "Transcript —" child page + debrief + ideas + recap
+      // draft in one POST (idempotent by transcript hash).
+      const res = await fetch(`/api/accounts/${accountId}/calls/intake`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-publish-secret": secret },
-        body: JSON.stringify({ transcript, title: fileName ? `Story call — ${fileName}` : undefined }),
+        body: JSON.stringify({
+          transcript,
+          name: fileName ? `Story call — ${fileName.replace(/\.(txt|vtt|srt|md)$/i, "")}` : undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -124,7 +129,12 @@ export default function CallsPage() {
         }
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }
-      setResult(data);
+      if (data.duplicate) {
+        setError("This transcript already landed — see the existing call row.");
+        setStatus("error");
+        return;
+      }
+      setResult({ analysis: data.analysis, notion: data.url ? { url: data.url } : null });
       setStatus("done");
       // refresh the calls list — the new row should appear
       fetch(`/api/accounts/${accountId}/calls`)
