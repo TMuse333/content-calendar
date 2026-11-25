@@ -118,6 +118,29 @@ const POST_STATUS_COLOR: Record<string, string> = {
   Draft: "#52525b",
 };
 
+/* metrics→tree decision layer (GET /tree/next) */
+interface DecisionVerdict {
+  nodeId: string;
+  verdict: "proven" | "promising" | "weak" | "mixed" | "untested";
+  tests: number;
+  lift: number | null;
+  reason: string;
+}
+interface NextMove {
+  rank: number;
+  nodeId: string;
+  name: string;
+  verdict: DecisionVerdict["verdict"];
+  suggest: string;
+}
+const DCOL: Record<DecisionVerdict["verdict"], string> = {
+  proven: "#10b981",
+  promising: "#22d3ee",
+  weak: "#ef4444",
+  mixed: "#f59e0b",
+  untested: "#52525b",
+};
+
 const COL_W = 196,
   H_GAP = 66,
   NH = 52,
@@ -164,6 +187,8 @@ export default function TreePage() {
   const [scale, setScale] = useState(1);
   const [hideQuiet, setHideQuiet] = useState(true);
   const [panning, setPanning] = useState(false);
+  const [decisions, setDecisions] = useState<DecisionVerdict[]>([]);
+  const [nextMoves, setNextMoves] = useState<NextMove[]>([]);
   const stageRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
 
@@ -181,7 +206,16 @@ export default function TreePage() {
       .then((r) => r.json())
       .then((d) => setCalls(d.data ?? []))
       .catch(() => {});
+    fetch(`/api/accounts/${id}/tree/next`)
+      .then((r) => r.json())
+      .then((d) => {
+        setDecisions(d.data?.verdicts ?? []);
+        setNextMoves(d.data?.next ?? []);
+      })
+      .catch(() => {});
   }, [id]);
+
+  const decisionById = useMemo(() => new Map(decisions.map((d) => [d.nodeId, d])), [decisions]);
 
   /**
    * Load a call's analysis. On switch we only read the cache (compute=false) so we
@@ -414,6 +448,25 @@ export default function TreePage() {
                 {agg.stories} stories · {agg.posts} posts
               </span>
             </div>
+            {nextMoves.length > 0 && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className="font-mono text-[10px] tracking-[0.12em] uppercase" style={{ color: C.txDim }}>
+                  Next
+                </span>
+                {nextMoves.slice(0, 3).map((m) => (
+                  <button
+                    key={m.nodeId}
+                    onClick={() => setSelectedId(m.nodeId)}
+                    className="flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] hover:border-cyan-400/60"
+                    style={{ borderColor: C.borderHi, color: C.txMid, background: C.card }}
+                    title={m.suggest}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: DCOL[m.verdict] }} />
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {isCall && covState === "ready" && covTotal > 0 && (
@@ -542,6 +595,8 @@ export default function TreePage() {
           <NodeDrawer
             n={selected}
             cov={selectedCov}
+            decision={decisionById.get(selected.id)}
+            nextMove={nextMoves.find((m) => m.nodeId === selected.id)}
             mode={isCall ? "call" : "overall"}
             onClose={() => setSelectedId(null)}
             onBack={isCall ? () => setSelectedId(null) : undefined}
@@ -692,6 +747,8 @@ function NodeCard({
 function NodeDrawer({
   n,
   cov,
+  decision,
+  nextMove,
   mode,
   onClose,
   onBack,
@@ -699,6 +756,8 @@ function NodeDrawer({
 }: {
   n: NodeEvidence;
   cov?: NodeVerdict;
+  decision?: DecisionVerdict;
+  nextMove?: NextMove;
   mode: "overall" | "call";
   onClose: () => void;
   onBack?: () => void;
@@ -723,6 +782,9 @@ function NodeDrawer({
         <div className="text-lg font-semibold mt-1.5 mb-2.5 tracking-tight text-balance pr-6">{n.name}</div>
         <div className="flex gap-1.5 flex-wrap">
           {mode === "call" && cov && <Chip label={`${cov.verdict} on this call`} color={VCOL[cov.verdict]} />}
+          {mode === "overall" && decision && !isStruct && (
+            <Chip label={`${decision.verdict}${decision.lift !== null ? ` ${decision.lift >= 0 ? "+" : ""}${Math.round(decision.lift * 100)}%` : ""}`} color={DCOL[decision.verdict]} />
+          )}
           {n.status && <Chip label={n.status} color={n.status ? STATUS_COLOR[n.status] : C.txMid} muted={mode === "call"} />}
           {isStruct && <Chip label={`${childCount} situations`} color={C.txMid} muted />}
         </div>
@@ -781,7 +843,24 @@ function NodeDrawer({
             Metrics pending — Instagram sync hasn&rsquo;t run for these posts yet.
           </div>
         )}
+        {mode === "overall" && decision && !isStruct && (
+          <div className="mt-2.5 text-[12px] leading-relaxed flex items-start gap-2" style={{ color: C.txMid }}>
+            <span className="w-1.5 h-1.5 rounded-full flex-none mt-[5px]" style={{ background: DCOL[decision.verdict] }} />
+            <span>{decision.reason}</span>
+          </div>
+        )}
       </Section>
+
+      {mode === "overall" && nextMove && (
+        <Section title="Next move">
+          <div className="text-[13px] leading-relaxed" style={{ color: C.txHi }}>
+            {nextMove.suggest}
+          </div>
+          <div className="mt-1 font-mono text-[10px]" style={{ color: C.txDim }}>
+            ranked #{nextMove.rank} across the board
+          </div>
+        </Section>
+      )}
 
       {n.postCount > 0 ? (
         <Section title="Tests — the posts training this node">
