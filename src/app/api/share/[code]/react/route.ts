@@ -11,6 +11,7 @@ import { reactionComment, type Reaction } from "@/lib/share/links";
 import { commentOnPost } from "@/lib/notion/answers";
 import { getPostById, updatePostStatus, createPostFeedback } from "@/lib/notion";
 import { performReviewAction } from "@/lib/review/action";
+import { sendNotification } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
   await commentOnPost(postId, reactionComment(ctx.account.name, reaction, comment));
 
   const post = await getPostById(ctx.config, postId);
+  await sendNotification({
+    accountId: ctx.account.id,
+    event: "share_link.reaction",
+    data: { linkId: code, reaction, resource: post?.title ?? postId, ...(comment ? { comment } : {}) },
+  });
   if (post?.status === "Ready for review") {
     try {
       await performReviewAction(

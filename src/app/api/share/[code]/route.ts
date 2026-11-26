@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { resolveShare } from "@/lib/share/context";
 import { recordShareOpen } from "@/lib/mongodb/share-links";
+import { sendNotification } from "@/lib/notify";
 import { notifyOnClientPage } from "@/lib/notion/answers";
 import { getPostById, getPosts } from "@/lib/notion";
 import { buildComingUp } from "@/lib/share/coming-up";
@@ -37,6 +38,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
         if (first && ctx.config) {
           const who = ctx.account.name.split(" ")[0] || "Client";
           await notifyOnClientPage(ctx.config, `${who} opened your share link (${ctx.link.postIds.length} posts${ctx.link.questionSet ? " + questions" : ""}).`);
+        }
+        if (first) {
+          await sendNotification({
+            accountId: ctx.account.id,
+            event: "share_link.opened",
+            data: { linkId: code, resource: `${ctx.link.postIds.length} posts${ctx.link.questionSet ? " + questions" : ""}` },
+            idempotencyKey: `${code}:opened`,
+          });
         }
       } catch (err) {
         console.warn("[share] open tracking failed", err);
