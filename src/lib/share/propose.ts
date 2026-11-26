@@ -82,5 +82,24 @@ export async function proposeContentSet(input: ProposeInput): Promise<ProposeRes
     idempotencyKey: dryRun ? `${link.code}:dry:${Date.now()}` : link.code,
   });
 
+  // Dry runs also push a Slack preview into the client's channel (operator
+  // cockpit). Slack-only + visibility internal: no email leg exists, so this
+  // can never reach the client even if the allowlist changes.
+  if (dryRun) {
+    await sendNotification({
+      accountId: input.accountId,
+      event: "content.proposed",
+      visibility: "internal",
+      channels: ["slack"],
+      data: {
+        count: link.postIds.length,
+        kind: input.kind ?? "carousels",
+        title: input.title,
+        link: url,
+      },
+      idempotencyKey: `${link.code}:dry-slack:${Date.now()}`,
+    });
+  }
+
   return { url, code: link.code, expiresAt: link.expiresAt, count: link.postIds.length, dryRun, notify };
 }
