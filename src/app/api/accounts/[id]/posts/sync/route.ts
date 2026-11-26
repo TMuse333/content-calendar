@@ -92,7 +92,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       mediaUrl: p.thumbnailUrl, // We'll use thumbnail for display
       thumbnailUrl: p.thumbnailUrl,
       caption: p.caption || undefined,
-      permalink: `https://www.instagram.com/p/${p.id}/`,
+      permalink: p.permalink || `https://www.instagram.com/p/${p.id}/`,
       postedAt: new Date(p.timestamp),
       metrics: {
         likes: p.likes,

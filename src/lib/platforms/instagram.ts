@@ -52,6 +52,8 @@ export interface PostWithInsights {
   caption: string;
   mediaType: string;
   thumbnailUrl: string;
+  /** Real IG permalink (shortcode URL) — the join key to Notion "IG post link". */
+  permalink?: string;
   timestamp: string;
   impressions: number;
   reach: number;
@@ -216,10 +218,23 @@ export async function uploadToInstagram(request: UploadRequest, credentials?: In
       return { success: false, error: publishData.error?.message || "Failed to publish" };
     }
 
+    // The media-id URL is NOT a working IG link — fetch the real shortcode
+    // permalink (join key to Notion). Best effort; fall back to synthetic.
+    let permalink = `https://www.instagram.com/p/${publishData.id}/`;
+    try {
+      const permRes = await fetch(
+        `${graphHost(creds.apiHost)}/v21.0/${publishData.id}?fields=permalink&access_token=${accessToken}`
+      );
+      const permData = await permRes.json();
+      if (typeof permData.permalink === "string" && permData.permalink) permalink = permData.permalink;
+    } catch {
+      // keep synthetic fallback
+    }
+
     return {
       success: true,
       instagramId: publishData.id,
-      permalink: `https://www.instagram.com/p/${publishData.id}/`,
+      permalink,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -247,7 +262,7 @@ export async function fetchInstagramPosts(options?: {
 
   try {
     const posts: InstagramPost[] = [];
-    let nextUrl: string | null = `${graphHost(creds.apiHost)}/${instagramId}/media?fields=id,caption,media_type,thumbnail_url,media_url,timestamp,like_count,comments_count&access_token=${accessToken}&limit=${limit}`;
+    let nextUrl: string | null = `${graphHost(creds.apiHost)}/${instagramId}/media?fields=id,caption,media_type,permalink,thumbnail_url,media_url,timestamp,like_count,comments_count&access_token=${accessToken}&limit=${limit}`;
 
     while (nextUrl) {
       const res: Response = await fetch(nextUrl);
@@ -273,7 +288,7 @@ export async function fetchInstagramPosts(options?: {
           mediaType: post.media_type as "VIDEO" | "IMAGE" | "CAROUSEL_ALBUM",
           mediaUrl: (post.media_url as string) || (post.thumbnail_url as string),
           thumbnailUrl: post.thumbnail_url as string,
-          permalink: `https://www.instagram.com/p/${post.id}/`,
+          permalink: (post.permalink as string) || `https://www.instagram.com/p/${post.id}/`,
           timestamp: post.timestamp as string,
           likes: (post.like_count as number) ?? 0,
           comments: (post.comments_count as number) ?? 0,
@@ -354,7 +369,7 @@ export async function fetchPostInsights(options?: {
   try {
     // Fetch posts with media_product_type to determine metrics
     const postsRes = await fetch(
-      `${graphHost(creds.apiHost)}/${instagramId}/media?fields=id,caption,media_type,media_product_type,thumbnail_url,media_url,timestamp,like_count,comments_count&access_token=${accessToken}&limit=${limit}`
+      `${graphHost(creds.apiHost)}/${instagramId}/media?fields=id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp,like_count,comments_count&access_token=${accessToken}&limit=${limit}`
     );
     const postsData = await postsRes.json();
 
@@ -376,6 +391,7 @@ export async function fetchPostInsights(options?: {
         caption?: string;
         media_type: string;
         media_product_type?: string;
+        permalink?: string;
         thumbnail_url?: string;
         media_url?: string;
         timestamp: string;
@@ -411,6 +427,7 @@ export async function fetchPostInsights(options?: {
             caption: post.caption || "",
             mediaType: post.media_type,
             thumbnailUrl: post.thumbnail_url || post.media_url || "",
+            permalink: post.permalink,
             timestamp: post.timestamp,
             impressions: metricsMap.impressions ?? metricsMap.views ?? 0,
             reach: metricsMap.reach ?? 0,
@@ -429,6 +446,7 @@ export async function fetchPostInsights(options?: {
             caption: post.caption || "",
             mediaType: post.media_type,
             thumbnailUrl: post.thumbnail_url || post.media_url || "",
+            permalink: post.permalink,
             timestamp: post.timestamp,
             impressions: 0,
             reach: 0,

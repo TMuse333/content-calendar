@@ -176,16 +176,23 @@ export async function upsertPosts(posts: Omit<Post, "_id">[]): Promise<{
   const operations = posts.map((post) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { syncedAt, ...postWithoutSyncedAt } = post;
+    // Never let a synthetic media-id permalink (instagram.com/p/<digits>/)
+    // overwrite a real shortcode permalink already on the doc — the shortcode
+    // is the Notion↔IG join key.
+    const incoming = postWithoutSyncedAt as Record<string, unknown>;
+    const synthetic = typeof incoming.permalink === "string" && /instagram\.com\/p\/\d{8,}\/?$/.test(incoming.permalink);
+    if (synthetic) delete incoming.permalink;
     return {
       updateOne: {
         filter: { accountId: post.accountId, instagramId: post.instagramId },
         update: {
           $set: {
-            ...postWithoutSyncedAt,
+            ...incoming,
             updatedAt: now,
           },
           $setOnInsert: {
             syncedAt: now,
+            ...(synthetic ? { permalink: post.permalink } : {}),
           },
         },
         upsert: true,
